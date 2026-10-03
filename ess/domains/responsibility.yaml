@@ -1,0 +1,244 @@
+# Draft domain for Commission (story M-001). Nouns and relations are read from
+# docs/design/commission-design.md, docs/contracts/{commission-executor,frontier,evidence}.md and
+# Atlas ADR 0070. Every relation the sources do not settle is marked UNMAPPED: and stays out of the
+# model until a story decides it. One lifecycle state per entity until a command outcome moves it.
+domain: commission.responsibility
+
+summary: >-
+  An agent revision commissioned to a durable case. The governor owns the case's truth and returns
+  a frontier; a run is one bounded period of execution against it. The executor proposes; it never
+  completes a case.
+
+naming:
+  wire: responsibility
+  display: Responsibility
+
+types:
+  - name: commission.responsibility.AgentId
+    kind: newtype
+    of: Uuid
+
+  - name: commission.responsibility.AgentRevisionId
+    kind: newtype
+    of: Uuid
+
+  # A case id is issued by the governor (for example AEP) and is opaque here.
+  - name: commission.responsibility.CaseId
+    kind: newtype
+    of: String
+
+  - name: commission.responsibility.CommissionId
+    kind: newtype
+    of: Uuid
+
+  - name: commission.responsibility.RunId
+    kind: newtype
+    of: Uuid
+
+  - name: commission.responsibility.FrontierId
+    kind: newtype
+    of: Uuid
+
+  - name: commission.responsibility.EvidenceId
+    kind: newtype
+    of: Uuid
+
+  - name: commission.responsibility.ObservationId
+    kind: newtype
+    of: Uuid
+
+  - name: commission.responsibility.AuthorityDecisionId
+    kind: newtype
+    of: Uuid
+
+  # docs/contracts/commission-executor.md: what an executor may hand back.
+  - name: commission.responsibility.ExecutorOutcome
+    kind: enum
+    variants: [ProposedAction, NeedsHumanJudgment, Suspended, NoUsefulAction, CompletedLocalReasoning]
+
+  # docs/contracts/protocol-core.md: three-valued truth.
+  - name: commission.responsibility.Truth
+    kind: enum
+    variants: ["True", "False", "Unknown"]
+
+entities:
+  # Reusable worker configuration.
+  - name: commission.responsibility.Agent
+    identity:
+      name: agent_id
+      type: commission.responsibility.AgentId
+    fields:
+      - name: name
+        type: String
+    relations:
+      # A revision has no meaning without its agent.
+      - name: revisions
+        kind: owns
+        target: commission.responsibility.AgentRevision
+        cardinality: many
+        via: agent_id
+    lifecycle:
+      initial: Registered
+      states: [Registered]
+      terminal: [Registered]
+
+  - name: commission.responsibility.AgentRevision
+    identity:
+      name: agent_revision_id
+      type: commission.responsibility.AgentRevisionId
+    fields:
+      - name: agent_id
+        type: commission.responsibility.AgentId
+      - name: revision
+        type: Integer
+    lifecycle:
+      initial: Published
+      states: [Published]
+      terminal: [Published]
+
+  # Durable undertaking under a protocol. Commission holds a reference; the governor holds truth.
+  - name: commission.responsibility.Case
+    identity:
+      name: case_id
+      type: commission.responsibility.CaseId
+    fields:
+      - name: protocol
+        type: String
+      - name: revision
+        type: Integer
+    lifecycle:
+      initial: Open
+      states: [Open]
+      terminal: [Open]
+
+  # Binds one agent revision to one case under a governor (ADR 0070).
+  # UNMAPPED: how many commissions a case may hold at once (one, or many in parallel) is not settled
+  # by the sources; no relation from Case to Commission is declared until a story decides it.
+  # UNMAPPED: principal and authority context are named in commission-design.md without a type.
+  - name: commission.responsibility.Commission
+    identity:
+      name: commission_id
+      type: commission.responsibility.CommissionId
+    fields:
+      - name: agent_revision_id
+        type: commission.responsibility.AgentRevisionId
+      - name: case_id
+        type: commission.responsibility.CaseId
+    relations:
+      - name: agent_revision
+        kind: references
+        target: commission.responsibility.AgentRevision
+        cardinality: one
+        via: agent_revision_id
+      - name: case
+        kind: references
+        target: commission.responsibility.Case
+        cardinality: one
+        via: case_id
+      # A run is one bounded period of execution of this commission.
+      - name: runs
+        kind: owns
+        target: commission.responsibility.Run
+        cardinality: many
+        via: commission_id
+    lifecycle:
+      initial: Assigned
+      states: [Assigned]
+      terminal: [Assigned]
+
+  - name: commission.responsibility.Run
+    identity:
+      name: run_id
+      type: commission.responsibility.RunId
+    fields:
+      - name: commission_id
+        type: commission.responsibility.CommissionId
+      # The case revision the run started against; a proposal made on another revision is stale.
+      - name: case_revision
+        type: Integer
+    lifecycle:
+      initial: Running
+      states: [Running]
+      terminal: [Running]
+
+  # docs/contracts/frontier.md: the bridge between governance and execution, for one case revision.
+  # UNMAPPED: claims, obligations and actions inside a frontier are Canon values; whether they are
+  # entities here or a value type imported from Canon is decided in story M-002.
+  - name: commission.responsibility.Frontier
+    identity:
+      name: frontier_id
+      type: commission.responsibility.FrontierId
+    fields:
+      - name: case_id
+        type: commission.responsibility.CaseId
+      - name: case_revision
+        type: Integer
+    relations:
+      - name: case
+        kind: references
+        target: commission.responsibility.Case
+        cardinality: one
+        via: case_id
+    lifecycle:
+      initial: Issued
+      states: [Issued]
+      terminal: [Issued]
+
+  # docs/contracts/evidence.md: a raw report from a runtime, integration or verifier.
+  # UNMAPPED: which observations an evidence record interprets (one or many) is not settled; no
+  # relation from Evidence to Observation is declared.
+  - name: commission.responsibility.Observation
+    identity:
+      name: observation_id
+      type: commission.responsibility.ObservationId
+    fields:
+      - name: source
+        type: String
+      - name: subject
+        type: String
+    lifecycle:
+      initial: Reported
+      states: [Reported]
+      terminal: [Reported]
+
+  # Typed, attributable information admitted by the governor. A trace is not evidence (ADR 0074).
+  - name: commission.responsibility.Evidence
+    identity:
+      name: evidence_id
+      type: commission.responsibility.EvidenceId
+    fields:
+      - name: case_id
+        type: commission.responsibility.CaseId
+      - name: kind
+        type: String
+      - name: subject_revision
+        type: Integer
+      - name: producer
+        type: String
+    relations:
+      - name: case
+        kind: references
+        target: commission.responsibility.Case
+        cardinality: one
+        via: case_id
+    lifecycle:
+      initial: Submitted
+      states: [Submitted]
+      terminal: [Submitted]
+
+  # Authority stays outside the model; a decision is supplied by an AuthorityProvider.
+  # UNMAPPED: whether a decision belongs to a commission, a case or a single action request is not
+  # settled by the sources.
+  - name: commission.responsibility.AuthorityDecision
+    identity:
+      name: authority_decision_id
+      type: commission.responsibility.AuthorityDecisionId
+    fields:
+      - name: action
+        type: String
+      - name: granted
+        type: Boolean
+    lifecycle:
+      initial: Decided
+      states: [Decided]
+      terminal: [Decided]
