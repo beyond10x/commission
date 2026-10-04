@@ -287,7 +287,12 @@ fn repo_copy(case: &Path, with_generated: bool) -> PathBuf {
         fs::create_dir_all(&copy).expect("create root copy");
         fs::copy(root.join(file), copy.join(file)).expect("copy root file");
     }
-    for dir in ["ess", "crates/commission", "crates/commission-xtask"] {
+    for dir in [
+        "ess",
+        "crates/commission",
+        "crates/commission-testkit",
+        "crates/commission-xtask",
+    ] {
         copy_tree(&root.join(dir), &copy.join(dir));
     }
     if with_generated {
@@ -333,6 +338,30 @@ fn xtask_at(root: &Path, args: &[&str]) -> Output {
     let mut all = vec!["--root", path_str(root)];
     all.extend_from_slice(args);
     xtask(&all)
+}
+
+#[test]
+fn no_hand_model_scans_the_testkit_by_default() {
+    let case = case_dir("no_hand_model_scans_the_testkit_by_default");
+    let root = repo_copy(&case, true);
+    let fake = root.join("crates/commission-testkit/src/fake_executor.rs");
+    fs::write(
+        &fake,
+        "pub enum ExecutorOutcome {\n    NoUsefulAction,\n}\n",
+    )
+    .expect("write fake_executor.rs");
+
+    let out = xtask_at(&root, &["no-hand-model"]);
+    let stderr = text(&out.stderr);
+    assert!(
+        !out.status.success()
+            && stderr.lines().any(|line| {
+                line.contains("crates/commission-testkit/src/fake_executor.rs:1")
+                    && line.contains("enum ExecutorOutcome")
+            }),
+        "no-hand-model passed a hand-written ExecutorOutcome in the testkit:\nstdout:\n{}\nstderr:\n{stderr}",
+        text(&out.stdout)
+    );
 }
 
 #[test]
@@ -654,5 +683,104 @@ fn task_generate_writes_the_tree_when_it_is_absent() {
         tree_bytes(&written),
         tree_bytes(&repo_root().join("generated/rust/commission")),
         "task generate into an absent tree does not match the committed tree"
+    );
+}
+
+/// Runs `no-hand-model` over a one-file crate whose `lib.rs` is `body`.
+fn no_hand_model_on(case_name: &str, body: &str) -> Output {
+    let case = case_dir(case_name);
+    let src = case.join("src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(src.join("lib.rs"), body).expect("write lib.rs");
+    no_hand_model(&src)
+}
+
+fn assert_refused_at(out: &Output, line: usize, needles: &[&str]) {
+    let stderr = text(&out.stderr);
+    assert!(
+        !out.status.success()
+            && stderr.lines().any(|candidate| {
+                candidate.contains(&format!("lib.rs:{line}:"))
+                    && needles.iter().all(|needle| candidate.contains(needle))
+            }),
+        "no-hand-model did not refuse lib.rs:{line} naming {needles:?}:\nstatus: {}\nstdout:\n{}\nstderr:\n{stderr}",
+        out.status,
+        text(&out.stdout)
+    );
+}
+
+#[test]
+fn no_hand_model_refuses_a_model_type_in_a_macro_rules_body() {
+    for keyword in ["struct", "enum", "type", "union", "trait"] {
+        let out = no_hand_model_on(
+            &format!("no_hand_model_macro_rules_{keyword}"),
+            &format!(
+                "macro_rules! stamp {{\n    () => {{\n        pub {keyword} r#Commission\n    }};\n}}\n"
+            ),
+        );
+        assert_refused_at(&out, 3, &[keyword, "Commission"]);
+    }
+}
+
+#[test]
+fn no_hand_model_refuses_a_model_type_in_an_item_macro_invocation() {
+    let out = no_hand_model_on(
+        "no_hand_model_item_macro",
+        "some_crate::declare! {\n    pub struct Hand;\n    pub enum CaseId { A }\n}\n",
+    );
+    assert_refused_at(&out, 3, &["enum", "CaseId"]);
+}
+
+#[test]
+fn no_hand_model_refuses_a_model_type_in_a_statement_macro() {
+    let out = no_hand_model_on(
+        "no_hand_model_statement_macro",
+        "fn f() {\n    stamp!(struct AgentId;);\n}\n",
+    );
+    assert_refused_at(&out, 2, &["struct", "AgentId"]);
+}
+
+#[test]
+fn no_hand_model_refuses_include() {
+    for (body, line) in [
+        ("include!(\"hand.rs\");\n", 1),
+        (
+            "pub mod m {\n    std::include!(concat!(env!(\"OUT_DIR\"), \"/x.rs\"));\n}\n",
+            2,
+        ),
+        ("fn f() {\n    core::include! { \"hand.rs\" }\n}\n", 2),
+    ] {
+        let out = no_hand_model_on("no_hand_model_include", body);
+        assert_refused_at(&out, line, &["include!"]);
+    }
+}
+
+#[test]
+fn no_hand_model_refuses_a_path_attribute_on_a_module() {
+    for (body, line) in [
+        ("#[path = \"../elsewhere/hand.rs\"]\npub mod hand;\n", 1),
+        (
+            "mod outer {\n    #[path = \"x.rs\"]\n    mod inner {}\n}\n",
+            2,
+        ),
+        ("#[cfg_attr(test, path = \"hand.rs\")]\nmod hand;\n", 1),
+    ] {
+        let out = no_hand_model_on("no_hand_model_path_attribute", body);
+        assert_refused_at(&out, line, &["path"]);
+    }
+}
+
+#[test]
+fn no_hand_model_passes_macros_that_declare_no_model_type() {
+    let out = no_hand_model_on(
+        "no_hand_model_harmless_macros",
+        "macro_rules! stamp {\n    () => { pub struct Handmade; };\n}\nstamp!();\n\
+         fn f() -> String {\n    format!(\"struct Commission {}\", 1)\n}\n\
+         #[cfg_attr(test, derive(Debug))]\nmod inline {}\n",
+    );
+    assert!(
+        out.status.success(),
+        "no-hand-model refused macros that declare no model type:\n{}",
+        text(&out.stderr)
     );
 }

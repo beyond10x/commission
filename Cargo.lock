@@ -53,16 +53,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "b10x-canon"
-version = "0.0.0"
-source = "git+https://github.com/beyond10x/canon?branch=main#cf29c4b974feb3ac000ad8ad227451674b1fe99a"
-
-[[package]]
 name = "b10x-commission"
 version = "0.0.0"
 dependencies = [
- "b10x-canon",
  "commission",
+]
+
+[[package]]
+name = "b10x-commission-testkit"
+version = "0.0.0"
+dependencies = [
+ "b10x-commission",
+ "syn",
 ]
 
 [[package]]
