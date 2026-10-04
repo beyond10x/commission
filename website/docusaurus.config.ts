@@ -80,7 +80,7 @@ const config: Config = {
           items: [
             {label: 'Loom', href: 'https://beyond10x.github.io/loom/'},
             {label: 'ESS', href: 'https://beyond10x.github.io/ess/'},
-            {label: 'AEP', href: 'https://beyond10x.github.io/aep/'},
+            {label: 'Canon', href: 'https://beyond10x.github.io/canon/'},
             {label: 'Source', href: 'https://github.com/beyond10x/commission'},
           ],
         },

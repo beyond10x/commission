@@ -72,7 +72,7 @@
       "tools": [
         {"name": "Loom", "description": "The native executor. It implements Commission's execution contracts; Commission core does not depend on it.", "href": "https://beyond10x.github.io/loom/"},
         {"name": "ESS", "description": "Executable system specifications: Commission's model is specified and generated with it.", "href": "https://beyond10x.github.io/ess/"},
-        {"name": "AEP", "description": "One governor implementation. Commission itself is domain-neutral.", "href": "https://beyond10x.github.io/aep/"}
+        {"name": "Canon", "description": "The protocol calculus a governor evaluates: what is known, owed and earned for a case.", "href": "https://beyond10x.github.io/canon/"}
       ]
     }
   ]

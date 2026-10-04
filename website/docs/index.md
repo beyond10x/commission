@@ -20,7 +20,7 @@ for it is a commission. Seven nouns cover it.
 | **Case** | Durable work under a protocol. Commission holds a reference to the case; the governor holds its truth. |
 | **Commission** | Binds one agent revision to one case, with a principal and an authority context. A case may hold several commissions at once. |
 | **Run** | One bounded period of execution of a commission. A run records the case revision it started against, so a proposal made on another revision is stale. |
-| **Governor** | Decides what the agent may do next and whether the case is complete. AEP is one governor implementation; Commission itself is domain-neutral. |
+| **Governor** | Decides what the agent may do next and whether the case is complete, by evaluating the case's protocol with [Canon](https://beyond10x.github.io/canon/). Commission defines the governor port and stays domain-neutral. |
 | **Frontier** | What the governor returns for one case revision: what is known, unknown or contradicted, which obligations are open, which actions are admissible, which need authority, and what is blocked and why. See [the frontier sketch](./concepts/contracts/frontier.md). |
 | **AgentExecutor** | Proposes an action from the frontier. It does not act on its own say-so: Commission is built to revalidate every proposal first (the loop that does so is planned; see [A run](./concepts/a-run.md)). See [the executor sketch](./concepts/contracts/executor.md). |
 
