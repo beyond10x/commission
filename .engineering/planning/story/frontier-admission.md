@@ -26,7 +26,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 7
+revision: 8
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"review_outcome":1}}}
 ---
@@ -120,3 +120,19 @@ passes. It builds generated `Frontier` values by hand and checks these expectati
 
 TASKBOARD M-002 (build pack `TASKBOARD.md` § Commission); `docs/contracts/frontier.md`; Atlas
 ADRs 0072, 0076.
+
+
+## Contract drift to settle first
+
+Wave 2026-10-04-w2 (story:ess-hard-gate, adversary pass 2, finding F3) found that
+`docs/contracts/frontier.md` no longer matches the value types the specification now declares:
+
+- the contract keys frontier items by `id`; the specification names them `claim`, `obligation`, `action`;
+- the contract gives obligations `status: open` plus `priority`; the specification has `open: Boolean`;
+- the contract's `reasons` are structured (`claim`, `required`, `actual`); the specification has `List<String>`;
+- the contract's action statuses have no approval-required value; the specification has `ApprovalRequired`;
+- the contract says a claim may be "unknown or contradicted"; `Truth` cannot say contradicted.
+
+This story decides each difference before it writes the admission check: either the specification
+grows to the contract (through `ess/` and regeneration) or the contract is rewritten to the
+specification. Both end with the two in agreement.

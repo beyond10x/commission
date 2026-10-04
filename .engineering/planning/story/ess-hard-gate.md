@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:ess-hard-gate
 kind: story
-status: draft
+status: implemented
 title: Commission's ESS specification is a hard gate in task check, and the frontier holds Commission-owned value types
 summary: 'Validate, compile and synthesize with 0 refusals and no UNMAPPED: under ess/, as test ess_gate wired as task ess-gate; frontier claims, obligations and actions become Commission value types.'
 refs:
@@ -25,7 +25,11 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 2
+revision: 5
+transitions:
+- {from: "draft", to: "proposed", at: "2026-10-04T01:17:40Z", actor: "human:timo", revision: 3}
+- {from: "proposed", to: "active", at: "2026-10-04T01:17:40Z", actor: "human:timo", revision: 4}
+- {from: "active", to: "implemented", at: "2026-10-04T01:40:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"test_result":1,"review_outcome":4,"verification":1}}}
 ---
 ## Outcome
 
