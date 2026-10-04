@@ -70,6 +70,7 @@ fn guard_violations(listing: &str, refused: &[String]) -> Vec<String> {
 fn real_listing() -> String {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let out = Command::new(cargo)
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(root())
         .args([
             "tree",

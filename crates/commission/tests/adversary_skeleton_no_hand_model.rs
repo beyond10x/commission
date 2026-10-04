@@ -55,6 +55,7 @@ fn adversary_skeleton_no_hand_model_refuses_hand_written_bootstrap_outcomes_in_p
 
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let out = Command::new(cargo)
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(&root)
         .args(["run", "-q", "--locked", "-p", "commission-xtask", "--"])
         .arg("--root")
