@@ -1,6 +1,6 @@
 // generated from commission v1
-// model digest 77dc61714ccce20ef2f833a1f99ef2989ba12c67fc6c27616df1e8a70905bdb1
-// contract digest a663fd457c98f8fa31002ad114ea722984ce21a6df29ad17989bf7e75edb591a
+// model digest a3b6896a96a91b19581506d7622aa6bba27b271020f12d78673c828a61542674
+// contract digest 376f5be8445e9cc0e3df87c1f9b7e389768aa141b5e21a3d0cb87fac737a44cd
 // do not edit: regenerate with `ess synthesize --layout crate`
 
 //! Responsibility — `commission.responsibility`.
@@ -18,6 +18,33 @@ pub enum ActionStatus {
     ApprovalRequired,
     /// `Blocked`.
     Blocked,
+}
+
+/// Admission — `commission.responsibility.Admission`: one of a fixed set of shapes, tagged on the wire by `kind`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Admission {
+    /// Tagged `Admissible` — `commission.responsibility.Unit`.
+    Admissible(Unit),
+    /// Tagged `NeedsAuthority` — `commission.responsibility.AdmissionNeedsAuthority`.
+    NeedsAuthority(AdmissionNeedsAuthority),
+    /// Tagged `Refused` — `commission.responsibility.AdmissionRefused`.
+    Refused(AdmissionRefused),
+}
+
+/// AdmissionNeedsAuthority — `commission.responsibility.AdmissionNeedsAuthority`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdmissionNeedsAuthority {
+    /// `capability` — `String`.
+    pub capability: String,
+}
+
+/// AdmissionRefused — `commission.responsibility.AdmissionRefused`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdmissionRefused {
+    /// `action` — `String`.
+    pub action: String,
+    /// `reasons` — `List<String>`.
+    pub reasons: Vec<String>,
 }
 
 /// The states of `commission.responsibility.Agent`, as runtime values.

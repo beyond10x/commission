@@ -1,20 +1,23 @@
 <!--
   generated from commission v1
-  model digest 77dc61714ccce20ef2f833a1f99ef2989ba12c67fc6c27616df1e8a70905bdb1
-  contract digest a663fd457c98f8fa31002ad114ea722984ce21a6df29ad17989bf7e75edb591a
+  model digest a3b6896a96a91b19581506d7622aa6bba27b271020f12d78673c828a61542674
+  contract digest 376f5be8445e9cc0e3df87c1f9b7e389768aa141b5e21a3d0cb87fac737a44cd
   do not edit: regenerate with `ess synthesize --layout crate`
 -->
 # Synthesis plan — commission v1
 
 Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regenerate with `ess synthesize --layout crate`.
 
-54 capabilities: **54 generated**, **0 obligations**, **0 refused**. An obligation is yours to implement against its contract; a refusal is a fact about this synthesis scope, not about the specification.
+57 capabilities: **57 generated**, **0 obligations**, **0 refused**. An obligation is yours to implement against its contract; a refusal is a fact about this synthesis scope, not about the specification.
 
 ## Generated
 
 | capability | source |
 | --- | --- |
 | domain type | `commission.responsibility.ActionStatus` |
+| domain type | `commission.responsibility.Admission` |
+| domain type | `commission.responsibility.AdmissionNeedsAuthority` |
+| domain type | `commission.responsibility.AdmissionRefused` |
 | domain type | `commission.responsibility.Agent.State` |
 | domain type | `commission.responsibility.AgentId` |
 | domain type | `commission.responsibility.AgentRevision.State` |

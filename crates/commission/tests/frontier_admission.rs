@@ -5,7 +5,7 @@ use b10x_commission::admission::admit;
 use b10x_commission::model::primitives::Uuid;
 use b10x_commission::model::responsibility::{
     ActionStatus, Admission, AdmissionNeedsAuthority, AdmissionRefused, CaseId, Frontier,
-    FrontierAction, FrontierData, FrontierId, frontier_state,
+    FrontierAction, FrontierData, FrontierId, Unit, frontier_state,
 };
 
 fn action(
@@ -107,4 +107,131 @@ fn admission_sorts_proposed_actions() {
         "Admission is {}, not the generated crate's type",
         std::any::type_name::<Admission>()
     );
+}
+
+/// Every ordering of `entries`, by Heap's algorithm.
+fn permutations(entries: &[FrontierAction]) -> Vec<Vec<FrontierAction>> {
+    fn heap(k: usize, items: &mut Vec<FrontierAction>, out: &mut Vec<Vec<FrontierAction>>) {
+        if k <= 1 {
+            out.push(items.clone());
+            return;
+        }
+        for i in 0..k {
+            heap(k - 1, items, out);
+            let swap = if k.is_multiple_of(2) { i } else { 0 };
+            items.swap(swap, k - 1);
+        }
+    }
+    let mut items = entries.to_vec();
+    let mut out = Vec::new();
+    heap(items.len(), &mut items, &mut out);
+    out
+}
+
+fn refused(action: &str, reasons: &[&str]) -> Admission {
+    Admission::Refused(AdmissionRefused {
+        action: action.into(),
+        reasons: reasons.iter().map(|r| (*r).into()).collect(),
+    })
+}
+
+/// A frontier that lists one action more than once is sorted by its least-authority entry, and
+/// the result is the same for every ordering of the entries (coordinator decision F1).
+#[test]
+fn admission_does_not_depend_on_entry_order() {
+    let other = action("unrelated.action", ActionStatus::Blocked, None, &["other"]);
+    let cases: Vec<(&str, Vec<FrontierAction>, Admission)> = vec![
+        (
+            "any Blocked entry refuses, carrying every Blocked entry's reasons",
+            vec![
+                action("x", ActionStatus::Admissible, None, &[]),
+                action("x", ActionStatus::Blocked, None, &["b-reason"]),
+                action(
+                    "x",
+                    ActionStatus::ApprovalRequired,
+                    Some("cap"),
+                    &["ignored"],
+                ),
+                action("x", ActionStatus::Blocked, None, &["a-reason", "z-reason"]),
+            ],
+            refused("x", &["a-reason", "z-reason", "b-reason"]),
+        ),
+        (
+            "an ApprovalRequired entry with no capability refuses, carrying its reasons",
+            vec![
+                action("x", ActionStatus::Admissible, None, &[]),
+                action("x", ActionStatus::ApprovalRequired, Some("cap"), &[]),
+                action("x", ActionStatus::ApprovalRequired, None, &["no approver"]),
+            ],
+            refused("x", &["no approver"]),
+        ),
+        (
+            "a whitespace-only capability is no capability: refused, carrying its reasons",
+            vec![
+                action("x", ActionStatus::Admissible, None, &[]),
+                action("x", ActionStatus::ApprovalRequired, Some("cap"), &[]),
+                action(
+                    "x",
+                    ActionStatus::ApprovalRequired,
+                    Some(" \t\n"),
+                    &["blank"],
+                ),
+            ],
+            refused("x", &["blank"]),
+        ),
+        (
+            "ApprovalRequired entries naming different capabilities refuse, quoting each",
+            vec![
+                action("x", ActionStatus::ApprovalRequired, Some("cap.b, c"), &[]),
+                action("x", ActionStatus::Admissible, None, &[]),
+                action("x", ActionStatus::ApprovalRequired, Some("cap.a\""), &[]),
+            ],
+            refused(
+                "x",
+                &[
+                    r#"conflicting capabilities for an ApprovalRequired action: "cap.a\"", "cap.b, c""#,
+                ],
+            ),
+        ),
+        (
+            "any ApprovalRequired entry needs authority",
+            vec![
+                action("x", ActionStatus::Admissible, None, &[]),
+                action("x", ActionStatus::ApprovalRequired, Some("cap"), &[]),
+                action("x", ActionStatus::ApprovalRequired, Some("cap"), &[]),
+            ],
+            Admission::NeedsAuthority(AdmissionNeedsAuthority {
+                capability: "cap".into(),
+            }),
+        ),
+        (
+            "only Admissible entries admit",
+            vec![
+                action("x", ActionStatus::Admissible, None, &[]),
+                action("x", ActionStatus::Admissible, None, &[]),
+            ],
+            Admission::Admissible(Unit(true)),
+        ),
+    ];
+    for (name, entries, expected) in cases {
+        let mut with_other = entries;
+        with_other.push(other.clone());
+        let orderings = permutations(&with_other);
+        assert!(
+            orderings.len() >= 6,
+            "{name}: only {} orderings",
+            orderings.len()
+        );
+        for ordering in orderings {
+            let names: Vec<_> = ordering
+                .iter()
+                .map(|e| format!("{}:{:?}", e.action, e.status))
+                .collect();
+            assert_eq!(
+                admit(&frontier(ordering), "x"),
+                expected,
+                "{name}; ordering {names:?}"
+            );
+        }
+    }
 }
