@@ -18,3 +18,7 @@ gemini-rs
 google-generative-ai-rs
 aws-sdk-bedrockruntime
 llama-cpp-2
+cohere-rust
+cohere
+cohere-rs
+cohere-ai

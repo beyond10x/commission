@@ -15,7 +15,7 @@ use b10x_commission::model::responsibility::{
     PrincipalId, ProposedActionArguments, SuspensionReason, Unit, commission_state, frontier_state,
 };
 use b10x_commission::ports::executor::AgentExecutor;
-use b10x_commission_testkit::fake_executor::ScriptedExecutor;
+use b10x_commission_testkit::fake_executor::{ExecutorCall, ScriptedExecutor};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -49,7 +49,24 @@ fn refused() -> Vec<String> {
     refused
 }
 
-/// The real `cargo tree -p b10x-commission -e normal --prefix none` listing for this tree.
+/// The guard's matcher: each refused crate a `cargo tree --prefix none` listing names, in
+/// `refused` order. A line names the crate its first word spells exactly, so `foo-extras` is not
+/// `foo`.
+fn guard_violations(listing: &str, refused: &[String]) -> Vec<String> {
+    let named: Vec<&str> = listing
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .collect();
+    refused
+        .iter()
+        .filter(|name| named.contains(&name.as_str()))
+        .cloned()
+        .collect()
+}
+
+/// The real `cargo tree -p b10x-commission -e normal --all-features --target all --prefix none`
+/// listing for this tree: every optional feature and every target, so a refused crate behind a
+/// feature or a `cfg(target)` table is listed too.
 fn real_listing() -> String {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let out = Command::new(cargo)
@@ -61,6 +78,9 @@ fn real_listing() -> String {
             "b10x-commission",
             "-e",
             "normal",
+            "--all-features",
+            "--target",
+            "all",
             "--prefix",
             "none",
         ])
@@ -83,8 +103,12 @@ fn text(value: &str) -> Value {
 }
 
 fn commission() -> Commission<commission_state::Assigned> {
+    commission_numbered(1)
+}
+
+fn commission_numbered(n: u8) -> Commission<commission_state::Assigned> {
     Commission::new(CommissionData {
-        commission_id: CommissionId(uuid(1)),
+        commission_id: CommissionId(uuid(n)),
         agent_revision_id: AgentRevisionId(uuid(2)),
         case_id: CaseId("case-1".to_owned()),
         principal: PrincipalId("principal-1".to_owned()),
@@ -95,8 +119,12 @@ fn commission() -> Commission<commission_state::Assigned> {
 /// A frontier with empty item lists: `story:frontier-admission` may change the item types, and
 /// this test neither builds nor reads an item.
 fn frontier() -> Frontier<frontier_state::Issued> {
+    frontier_numbered(3)
+}
+
+fn frontier_numbered(n: u8) -> Frontier<frontier_state::Issued> {
     Frontier::new(FrontierData {
-        frontier_id: FrontierId(uuid(3)),
+        frontier_id: FrontierId(uuid(n)),
         case_id: CaseId("case-1".to_owned()),
         case_revision: 7,
         claims: Vec::new(),
@@ -258,4 +286,32 @@ fn executor_port_contract() {
     assert!(guard_violations(clean, &refused).is_empty());
     let lookalike = format!("{clean}{first}-extras v0.1.0\n");
     assert!(guard_violations(&lookalike, &refused).is_empty());
+}
+
+/// The fake logs each call's commission id and frontier id, in call order, for the runtime loop
+/// (`story:local-runtime-loop`) to assert what it ran the executor on.
+#[test]
+fn scripted_executor_logs_each_call() {
+    let executor = ScriptedExecutor::new([
+        ExecutorOutcome::NoUsefulAction(Unit(true)),
+        ExecutorOutcome::NoUsefulAction(Unit(true)),
+        ExecutorOutcome::CompletedLocalReasoning(Unit(true)),
+    ]);
+    assert_eq!(executor.calls(), Vec::<ExecutorCall>::new());
+
+    let runs = [(1, 3), (1, 4), (5, 4)];
+    for (commission, frontier) in runs {
+        executor.run(
+            &commission_numbered(commission),
+            &frontier_numbered(frontier),
+        );
+    }
+    let expected: Vec<ExecutorCall> = runs
+        .iter()
+        .map(|(commission, frontier)| ExecutorCall {
+            commission_id: CommissionId(uuid(*commission)),
+            frontier_id: FrontierId(uuid(*frontier)),
+        })
+        .collect();
+    assert_eq!(executor.calls(), expected);
 }
