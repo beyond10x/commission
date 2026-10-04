@@ -40,6 +40,22 @@ Commission is specified in ESS under `ess/`. The domain is drafted and validated
 introduces a noun, and `task check` runs its conformance suite once synthesized. Change the
 specification first.
 
+The specification is a hard gate in `task check` (Atlas ADR 0076). The task `ess-gate` runs
+`crates/commission/tests/ess_gate.rs`, which fails `check` unless all four steps hold:
+
+1. `ess specify validate --path ess --strict-requires` exits 0;
+2. `ess specify compile --path ess --format json` exits 0;
+3. `ess verify conform synthesize --path ess --out <scratch>/suite.json` exits 0 with 0 refusals;
+4. no file under `ess/` contains `UNMAPPED:`.
+
+No story is implemented while the gate is red, whether or not it edits `ess/`; a story that edits
+`ess/` passes `ess-gate` on its own tree.
+
+A question the sources do not settle stays out of `ess/` and goes to the planning store as a
+`decision-blocker`, never into `ess/` as a marker. Step 4 stands in until ESS can see open
+questions: the `UNMAPPED:` scan is removed when the ESS release that refuses open entries
+(beyond10x/ess `epic:typed-open-questions`) is pinned.
+
 ## Work
 
 - Planned in the AEP store under `.engineering/`, written only through `aep plan artifact`. Body

@@ -11,6 +11,7 @@ tasks:
     desc: Format, lint, test.
     cmds:
       - task: spec
+      - task: ess-gate
       - task: drift
       - task: no-hand-model
       - cargo fmt --check
@@ -21,6 +22,11 @@ tasks:
     desc: Validate the ESS specification.
     cmds:
       - ess specify validate --path ess
+
+  ess-gate:
+    desc: Fail unless ess/ validates strictly, compiles, synthesizes with 0 refusals and carries no UNMAPPED marker (ADR 0076).
+    cmds:
+      - cargo test --locked -p b10x-commission --test ess_gate
 
   generate:
     desc: Rewrite generated/rust/commission/ from a fresh synthesis of ess/.
