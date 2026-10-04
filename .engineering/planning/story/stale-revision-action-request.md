@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:stale-revision-action-request
 kind: story
-status: proposed
+status: implemented
 title: Action requests are bound to a case revision and refused when stale
 summary: A proposed action becomes a request at the frontier's revision, revalidated against the current revision and frontier before use.
 refs:
@@ -25,9 +25,11 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 13
+revision: 17
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "proposed", to: "active", at: "2026-10-04T03:47:39Z", actor: "human:timo", revision: 14, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "active", to: "implemented", at: "2026-10-04T04:23:37Z", actor: "human:timo", revision: 17, decided_on: {"recorded":{"test_result":1,"review_outcome":8,"verification":1}}}
 ---
 ## Outcome
 
@@ -169,3 +171,31 @@ request. `ess specify validate --path ess` must pass with it.
 refusal reasons) blocked. The revalidation command above lists three outcomes. It gains a
 needs-authority outcome: an `ApprovalRequired` action is never revalidated as admitted without an
 authority decision. Settle the outcome's shape in this story's ESS change.
+
+
+## Coordinator decisions (wave 2026-10-04-w6)
+
+- Option A: `RevalidateActionRequest` takes the whole request as input (`run_id`, `case_id`,
+  `expected_case_revision`, `action`, `arguments`); its `admitted` outcome changes nothing. No
+  creating command, event or view is added (synthesis: 13 scenarios, 0 refusals).
+- `ActionRequestId` of `Uuid`; one state `Requested`; relations `Run.requests` (owns, many, via
+  `run_id`), `ActionRequest.case` (references, one), `AuthorityDecision.action_request` (references,
+  one, via `action_request_id`).
+- Outcomes checked in order: stale (`ActionRequestStale`), not admitted (`ActionNotAdmitted` with
+  reasons), needs authority (`ActionNeedsAuthority`), admitted. No unknown-request or
+  governor-unavailable outcome.
+
+### Adversary decisions (wave 2026-10-04-w6)
+
+- Pass 1: the failing-governor mutant is caught by `adversary_request_governor_errors.rs` (fixed).
+  Stale for a frontier issued at another revision, and `run_id` not being read, stay notes for later
+  stories (no-op).
+- Pass 2 F1: the case is checked before the frontier revision; a frontier for another case is
+  `ActionNotAdmitted` at any revision (fixed).
+- Pass 2 F2: the review found the specification wrong. `RevalidateActionRequest` input gains
+  `action_request_id` (`ess/domains/responsibility.yaml:644-645`), and the refusal reason names it
+  (fixed, ADR 0080 spec fix).
+- Pass 2 mutant notes on `>` vs `!=` and the dropped relations are caught by the adversary2 tests
+  (fixed).
+- `request()` taking only a `RunId`, and `RevalidateActionRequestBehavior` left unimplemented, stay
+  with story:commission-ess-conformance and later stories (no-op).
