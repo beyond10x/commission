@@ -96,9 +96,7 @@ fn run_gate_on(repo: &Path) -> (Output, String) {
     (output, both)
 }
 
-const ISSUING_COMMAND: &str = "
-commands:
-  - name: commission.responsibility.IssueFrontier
+const ISSUING_COMMAND: &str = "  - name: commission.responsibility.IssueFrontier
     input:
       - name: case_id
         type: commission.responsibility.CaseId
@@ -115,13 +113,24 @@ commands:
         sets:
           case_id: input.case_id
           case_revision: input.case_revision
+";
 
-events:
-  - name: commission.responsibility.FrontierIssued
+const ISSUED_EVENT: &str = "  - name: commission.responsibility.FrontierIssued
     fields:
       - name: frontier_id
         type: commission.responsibility.FrontierId
 ";
+
+/// `text` with `item` added to its top-level `section` list, opening the section at the end when
+/// the domain has none. A second top-level key of the same name would not be YAML ess accepts.
+fn add_to_section(text: &str, section: &str, item: &str) -> String {
+    let header = format!("\n{section}:\n");
+    match text.matches(&header).count() {
+        0 => format!("{text}{header}{item}"),
+        1 => text.replacen(&header, &format!("{header}{item}"), 1),
+        n => panic!("the domain opens `{section}:` {n} times"),
+    }
+}
 
 /// An invariant ESS cannot witness (no view publishes `case_id`), whose own text — which ess 0.52.0
 /// quotes verbatim on the `refused:` detail line, before its summary — reads `0 refusal(s)`.
@@ -138,12 +147,13 @@ fn adversary2_gate_reads_the_summary_count_not_a_quoted_one() {
     let text = fs::read_to_string(&domain).unwrap();
     let lifecycle_end = "      terminal: [Issued]\n";
     assert_eq!(text.matches(lifecycle_end).count(), 1, "Frontier lifecycle");
-    let mut text = text.replacen(
+    let text = text.replacen(
         lifecycle_end,
         &format!("{lifecycle_end}{INVARIANT_QUOTING_A_ZERO_COUNT}"),
         1,
     );
-    text.push_str(ISSUING_COMMAND);
+    let text = add_to_section(&text, "commands", ISSUING_COMMAND);
+    let text = add_to_section(&text, "events", ISSUED_EVENT);
     fs::write(&domain, &text).unwrap();
 
     // Precondition, observed from ess itself: one refusal, exit 0.
@@ -160,7 +170,10 @@ fn adversary2_gate_reads_the_summary_count_not_a_quoted_one() {
         probe.status.success()
             && report.contains("refused: refusal[ESS-SYNTH-011]")
             && report.contains("see 0 refusal(s) here")
-            && report.contains("1 scenario(s) (0 authored), 1 refusal(s), written to"),
+            && report
+                .lines()
+                .rfind(|line| line.contains(" scenario(s) "))
+                .is_some_and(|summary| summary.contains(" (0 authored), 1 refusal(s), written to")),
         "precondition: ess did not refuse one scenario with exit 0:\n{report}"
     );
 

@@ -1,6 +1,6 @@
 // generated from commission v1
-// model digest a3b6896a96a91b19581506d7622aa6bba27b271020f12d78673c828a61542674
-// contract digest 376f5be8445e9cc0e3df87c1f9b7e389768aa141b5e21a3d0cb87fac737a44cd
+// model digest 277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4
+// contract digest b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a
 // do not edit: regenerate with `ess synthesize --layout crate`
 
 //! Semantic types synthesised from the `commission` specification, v1.
@@ -17,7 +17,9 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod behaviour;
 pub mod json;
+pub mod obligation;
 pub mod primitives;
 pub mod responsibility;
 

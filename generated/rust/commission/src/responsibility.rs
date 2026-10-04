@@ -1,6 +1,6 @@
 // generated from commission v1
-// model digest a3b6896a96a91b19581506d7622aa6bba27b271020f12d78673c828a61542674
-// contract digest 376f5be8445e9cc0e3df87c1f9b7e389768aa141b5e21a3d0cb87fac737a44cd
+// model digest 277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4
+// contract digest b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a
 // do not edit: regenerate with `ess synthesize --layout crate`
 
 //! Responsibility — `commission.responsibility`.
@@ -302,6 +302,8 @@ pub struct ProposedActionArguments(pub crate::json::Value);
 pub enum RunState {
     /// `Running`.
     Running,
+    /// `Suspended`.
+    Suspended,
 }
 
 /// RunId — `commission.responsibility.RunId`: a distinct wrapper around `Uuid`.
@@ -1494,6 +1496,7 @@ pub mod run_state {
         /// Implemented only by the marker types beside this module.
         pub trait Sealed {}
         impl Sealed for super::Running {}
+        impl Sealed for super::Suspended {}
     }
 
     /// A declared state of `Run`, as a type.
@@ -1507,6 +1510,13 @@ pub mod run_state {
 
     impl Marker for Running {
         const STATE: super::RunState = super::RunState::Running;
+    }
+
+    /// `Suspended`.
+    pub struct Suspended;
+
+    impl Marker for Suspended {
+        const STATE: super::RunState = super::RunState::Suspended;
     }
 }
 
@@ -1548,6 +1558,26 @@ impl Run<run_state::Running> {
     }
 }
 
+impl Run<run_state::Running> {
+    /// `suspend` — `Running` → `Suspended`. Taken by the `suspended` outcome of `commission.responsibility.SuspendRun`.
+    pub fn suspend(self) -> Run<run_state::Suspended> {
+        Run {
+            data: self.data,
+            state: core::marker::PhantomData,
+        }
+    }
+}
+
+impl Run<run_state::Suspended> {
+    /// `resume` — `Suspended` → `Running`. Taken by the `resumed` outcome of `commission.responsibility.ResumeRun`.
+    pub fn resume(self) -> Run<run_state::Running> {
+        Run {
+            data: self.data,
+            state: core::marker::PhantomData,
+        }
+    }
+}
+
 /// `commission.responsibility.Run` as it crosses a boundary: the state as a value beside the data.
 ///
 /// Wire and storage know states only at runtime; [`RunSnapshot::refine`] is the one door back
@@ -1564,6 +1594,8 @@ pub struct RunSnapshot {
 pub enum AnyRun {
     /// Resting in `Running`.
     Running(Run<run_state::Running>),
+    /// Resting in `Suspended`.
+    Suspended(Run<run_state::Suspended>),
 }
 
 impl RunSnapshot {
@@ -1577,6 +1609,10 @@ impl RunSnapshot {
                 data: self.data,
                 state: core::marker::PhantomData,
             }),
+            RunState::Suspended => AnyRun::Suspended(Run {
+                data: self.data,
+                state: core::marker::PhantomData,
+            }),
         }
     }
 }
@@ -1586,6 +1622,7 @@ impl AnyRun {
     pub fn state(&self) -> RunState {
         match self {
             Self::Running(_) => RunState::Running,
+            Self::Suspended(_) => RunState::Suspended,
         }
     }
 
@@ -1596,6 +1633,205 @@ impl AnyRun {
                 state: RunState::Running,
                 data: instance.into_data(),
             },
+            Self::Suspended(instance) => RunSnapshot {
+                state: RunState::Suspended,
+                data: instance.into_data(),
+            },
         }
     }
+}
+
+/// ResumeRun — the input of `commission.responsibility.ResumeRun`.
+///
+/// Everything it can result in is [`ResumeRunOutcome`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResumeRun {
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+}
+
+/// Everything `commission.responsibility.ResumeRun` can result in — one variant per declared outcome.
+///
+/// An infrastructure failure is deliberately not in here: a refusal is a fact about the domain,
+/// a transport fault is a fact about the run, and conflating the two is what the declared
+/// outcomes exist to prevent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResumeRunOutcome {
+    /// `resumed` — otherwise.
+    Resumed {
+        /// The `commission.responsibility.RunResumed` this outcome publishes.
+        run_resumed: RunResumed,
+    },
+    /// `wrong-state` — from a state no declared move starts in.
+    WrongState {
+        /// Why it was refused: `commission.responsibility.RunStateConflict`.
+        error: RunStateConflict,
+    },
+    /// `wrong-state` — for an instance no record carries.
+    ///
+    /// The same declared branch and error as [`Self::WrongState`], without the error's fields: an instance
+    /// that does not exist has nothing for them to describe (`docs/design/unknown-instance-seams.md`).
+    WrongStateUnknownInstance,
+}
+
+/// StartRun — the input of `commission.responsibility.StartRun`.
+///
+/// Everything it can result in is [`StartRunOutcome`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StartRun {
+    /// `commission_id` — `commission.responsibility.CommissionId`.
+    pub commission_id: CommissionId,
+    /// `case_revision` — `Integer`.
+    pub case_revision: i64,
+}
+
+/// Everything `commission.responsibility.StartRun` can result in — one variant per declared outcome.
+///
+/// An infrastructure failure is deliberately not in here: a refusal is a fact about the domain,
+/// a transport fault is a fact about the run, and conflating the two is what the declared
+/// outcomes exist to prevent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StartRunOutcome {
+    /// `started` — otherwise.
+    Started {
+        /// The `commission.responsibility.RunStarted` this outcome publishes.
+        run_started: RunStarted,
+    },
+}
+
+/// SuspendRun — the input of `commission.responsibility.SuspendRun`.
+///
+/// Everything it can result in is [`SuspendRunOutcome`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SuspendRun {
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+    /// `reason` — `commission.responsibility.SuspensionReason`.
+    pub reason: SuspensionReason,
+}
+
+/// Everything `commission.responsibility.SuspendRun` can result in — one variant per declared outcome.
+///
+/// An infrastructure failure is deliberately not in here: a refusal is a fact about the domain,
+/// a transport fault is a fact about the run, and conflating the two is what the declared
+/// outcomes exist to prevent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SuspendRunOutcome {
+    /// `suspended` — otherwise.
+    Suspended {
+        /// The `commission.responsibility.RunSuspended` this outcome publishes.
+        run_suspended: RunSuspended,
+    },
+    /// `wrong-state` — from a state no declared move starts in.
+    WrongState {
+        /// Why it was refused: `commission.responsibility.RunStateConflict`.
+        error: RunStateConflict,
+    },
+    /// `wrong-state` — for an instance no record carries.
+    ///
+    /// The same declared branch and error as [`Self::WrongState`], without the error's fields: an instance
+    /// that does not exist has nothing for them to describe (`docs/design/unknown-instance-seams.md`).
+    WrongStateUnknownInstance,
+}
+
+/// RunResumed — the event `commission.responsibility.RunResumed`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunResumed {
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+}
+
+/// RunStarted — the event `commission.responsibility.RunStarted`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunStarted {
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+    /// `commission_id` — `commission.responsibility.CommissionId`.
+    pub commission_id: CommissionId,
+    /// `case_revision` — `Integer`.
+    pub case_revision: i64,
+}
+
+/// RunSuspended — the event `commission.responsibility.RunSuspended`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunSuspended {
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+    /// `reason` — `commission.responsibility.SuspensionReason`.
+    pub reason: SuspensionReason,
+}
+
+/// The declared error `commission.responsibility.RunStateConflict`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunStateConflict {
+    /// `state` — `commission.responsibility.Run.State`.
+    pub state: RunState,
+}
+
+/// RunStates — one row of the view `commission.responsibility.RunStates`.
+///
+/// Projects `commission.responsibility.Run` at `read_your_writes` consistency.
+/// The specification fully determines every row, so its query is generated over the storage port —
+/// see the plan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunStates {
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+    /// `commission_id` — `commission.responsibility.CommissionId`.
+    pub commission_id: CommissionId,
+    /// `case_revision` — `Integer`.
+    pub case_revision: i64,
+    /// `state` — `commission.responsibility.Run.State`.
+    pub state: RunState,
+}
+
+/// What this bounded context owes its implementor, and the seams of what is generated.
+///
+/// One trait per obligation in the synthesis plan, each carrying the plan's own contract, and one
+/// per generated behaviour, which [`Generated`](crate::behaviour::Generated) implements.
+pub mod obligations {
+    /// The behaviour `commission.responsibility.ResumeRun` — generated.
+    ///
+    /// The specification fully determines it: [`crate::behaviour::Generated`] implements it
+    /// over the storage and context ports. Implement it yourself to replace that behaviour.
+    pub trait ResumeRunBehavior {
+        /// Decides and enacts exactly one declared outcome of `commission.responsibility.ResumeRun`.
+        ///
+        /// `Err` is the typed refusal of a request the model declares no outcome for.
+        fn resume_run(&mut self, input: super::ResumeRun) -> Result<super::ResumeRunOutcome, crate::obligation::UnmetObligation>;
+    }
+
+    /// The behaviour `commission.responsibility.StartRun` — generated.
+    ///
+    /// The specification fully determines it: [`crate::behaviour::Generated`] implements it
+    /// over the storage and context ports. Implement it yourself to replace that behaviour.
+    pub trait StartRunBehavior {
+        /// Decides and enacts exactly one declared outcome of `commission.responsibility.StartRun`.
+        ///
+        /// `Err` is the typed refusal of a request the model declares no outcome for.
+        fn start_run(&mut self, input: super::StartRun) -> Result<super::StartRunOutcome, crate::obligation::UnmetObligation>;
+    }
+
+    /// The behaviour `commission.responsibility.SuspendRun` — generated.
+    ///
+    /// The specification fully determines it: [`crate::behaviour::Generated`] implements it
+    /// over the storage and context ports. Implement it yourself to replace that behaviour.
+    pub trait SuspendRunBehavior {
+        /// Decides and enacts exactly one declared outcome of `commission.responsibility.SuspendRun`.
+        ///
+        /// `Err` is the typed refusal of a request the model declares no outcome for.
+        fn suspend_run(&mut self, input: super::SuspendRun) -> Result<super::SuspendRunOutcome, crate::obligation::UnmetObligation>;
+    }
+
+    /// The query `commission.responsibility.RunStates` — generated.
+    ///
+    /// The specification fully determines it: [`crate::behaviour::Generated`] implements it
+    /// over the storage port. Implement it yourself to replace that query.
+    pub trait RunStatesQuery {
+        /// Serves `commission.responsibility.RunStates` rows at the view's declared consistency.
+        ///
+        /// `Err` is the typed refusal of a row whose declared type cannot hold its value.
+        fn run_states(&self) -> Result<Vec<super::RunStates>, crate::obligation::UnmetObligation>;
+    }
+
 }

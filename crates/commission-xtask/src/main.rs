@@ -517,8 +517,40 @@ fn parse(path: &Path, text: &str) -> Result<syn::File, String> {
     })
 }
 
-/// The type names the generated crate declares at the top of each of its modules.
+/// The type names the generated crate declares at the top of each of its files, and the trait
+/// names it declares in the inline modules below them (`obligations::StartRunBehavior`,
+/// `run_state::Marker`), descending only into `pub` modules: a private module such as
+/// `run_state::sealed` exports nothing, so its `Sealed` names no model type. A nested struct is a
+/// state marker (`run_state::Running`) whose name is a state, not a model type, so it is not
+/// reserved.
 fn generated_type_names(generated: &Path) -> Result<BTreeSet<String>, String> {
+    /// The module's items, when it is `pub` and inline.
+    fn public_items(item: &syn::ItemMod) -> Option<&[syn::Item]> {
+        match (&item.vis, &item.content) {
+            (syn::Visibility::Public(_), Some((_, items))) => Some(items),
+            _ => None,
+        }
+    }
+
+    fn nested_traits(items: &[syn::Item], names: &mut BTreeSet<String>) {
+        for item in items {
+            match item {
+                syn::Item::Trait(item) => {
+                    names.insert(item.ident.unraw().to_string());
+                }
+                syn::Item::TraitAlias(item) => {
+                    names.insert(item.ident.unraw().to_string());
+                }
+                syn::Item::Mod(item) => {
+                    if let Some(items) = public_items(item) {
+                        nested_traits(items, names);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
     let mut names = BTreeSet::new();
     for (path, text) in rust_sources(&generated.join("src"))? {
         for item in parse(&path, &text)?.items {
@@ -529,6 +561,12 @@ fn generated_type_names(generated: &Path) -> Result<BTreeSet<String>, String> {
                 syn::Item::Type(item) => item.ident,
                 syn::Item::Trait(item) => item.ident,
                 syn::Item::TraitAlias(item) => item.ident,
+                syn::Item::Mod(item) => {
+                    if let Some(items) = public_items(&item) {
+                        nested_traits(items, &mut names);
+                    }
+                    continue;
+                }
                 _ => continue,
             };
             names.insert(ident.unraw().to_string());

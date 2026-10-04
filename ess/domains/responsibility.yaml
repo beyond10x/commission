@@ -379,15 +379,18 @@ entities:
     fields:
       - name: commission_id
         type: commission.responsibility.CommissionId
-      # Resuming after a restart continues this same run (operator, 2026-10-04), so run state is
-      # durable; the Suspended state arrives with its command outcome in story M-007.
       # The case revision the run started against; a proposal made on another revision is stale.
       - name: case_revision
         type: Integer
+    # Resuming after a restart continues this same run (operator, 2026-10-04), so run state is
+    # durable. Resume keeps the run id and the case revision.
     lifecycle:
       initial: Running
-      states: [Running]
-      terminal: [Running]
+      states: [Running, Suspended]
+      terminal: []
+      transitions:
+        - {name: suspend, from: [Running], to: Suspended}
+        - {name: resume, from: [Suspended], to: Running}
 
   # docs/contracts/frontier.md: the bridge between governance and execution, for one case revision.
   # Its claims, obligations and actions are Commission's own value types (story M-002): none has an
@@ -492,3 +495,103 @@ entities:
       initial: Decided
       states: [Decided]
       terminal: [Decided]
+
+errors:
+  - name: commission.responsibility.RunStateConflict
+    fields:
+      - name: state
+        type: commission.responsibility.Run.State
+
+commands:
+  - name: commission.responsibility.StartRun
+    input:
+      - name: commission_id
+        type: commission.responsibility.CommissionId
+      - name: case_revision
+        type: Integer
+    outcomes:
+      - name: started
+        creates: commission.responsibility.Run
+        instance: run_id
+        sets:
+          commission_id: input.commission_id
+          case_revision: input.case_revision
+        emits: [commission.responsibility.RunStarted]
+        payload:
+          commission.responsibility.RunStarted:
+            run_id: {generated: true}
+            commission_id: input.commission_id
+            case_revision: input.case_revision
+
+  # The reason is reported, not stored on Run: where a suspension is kept is open
+  # (decision-blocker:suspension-durable-record).
+  - name: commission.responsibility.SuspendRun
+    input:
+      - name: run_id
+        type: commission.responsibility.RunId
+      - name: reason
+        type: commission.responsibility.SuspensionReason
+    outcomes:
+      - name: suspended
+        moves: commission.responsibility.Run.suspend
+        instance: run_id
+        emits: [commission.responsibility.RunSuspended]
+        payload:
+          commission.responsibility.RunSuspended:
+            run_id: input.run_id
+            reason: input.reason
+      - name: wrong-state
+        wrong_state: true
+        error: commission.responsibility.RunStateConflict
+
+  - name: commission.responsibility.ResumeRun
+    input:
+      - name: run_id
+        type: commission.responsibility.RunId
+    outcomes:
+      - name: resumed
+        moves: commission.responsibility.Run.resume
+        instance: run_id
+        emits: [commission.responsibility.RunResumed]
+        payload:
+          commission.responsibility.RunResumed:
+            run_id: input.run_id
+      - name: wrong-state
+        wrong_state: true
+        error: commission.responsibility.RunStateConflict
+
+events:
+  - name: commission.responsibility.RunStarted
+    fields:
+      - name: run_id
+        type: commission.responsibility.RunId
+      - name: commission_id
+        type: commission.responsibility.CommissionId
+      - name: case_revision
+        type: Integer
+
+  - name: commission.responsibility.RunSuspended
+    fields:
+      - name: run_id
+        type: commission.responsibility.RunId
+      - name: reason
+        type: commission.responsibility.SuspensionReason
+
+  - name: commission.responsibility.RunResumed
+    fields:
+      - name: run_id
+        type: commission.responsibility.RunId
+
+views:
+  - name: commission.responsibility.RunStates
+    source: commission.responsibility.Run
+    consistency: read_your_writes
+    fields:
+      - name: run_id
+        type: commission.responsibility.RunId
+      - name: commission_id
+        type: commission.responsibility.CommissionId
+      - name: case_revision
+        type: Integer
+      - name: state
+        type: commission.responsibility.Run.State
