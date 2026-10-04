@@ -1,6 +1,6 @@
 // generated from commission v1
-// model digest 277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4
-// contract digest b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a
+// model digest 8baad8a2a232f1823d8fce586ddd35c901af8923715a1eb1fbc3f62817da8e4f
+// contract digest c27daebab1de8a70c1c4985e2a48176db7d5700784cedf99b11902b83a5dea7a
 // do not edit: regenerate with `ess synthesize --layout crate`
 
 //! Responsibility — `commission.responsibility`.
@@ -8,6 +8,20 @@
 //! An agent revision commissioned to a durable case. The governor owns the case's truth and returns a frontier; a run is one bounded period of execution against it. The executor proposes; it never completes a case.
 //!
 //! Everything this bounded context declares that the synthesis plan marks generated.
+
+/// The states of `commission.responsibility.ActionRequest`, as runtime values.
+///
+/// Synthesised from the lifecycle, so the two cannot disagree. Which *moves* are legal is not
+/// carried here — it is carried by `ActionRequest<S>`, where an undeclared move does not compile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActionRequestState {
+    /// `Requested`.
+    Requested,
+}
+
+/// ActionRequestId — `commission.responsibility.ActionRequestId`: a distinct wrapper around `Uuid`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionRequestId(pub crate::primitives::Uuid);
 
 /// ActionStatus — `commission.responsibility.ActionStatus`: one of a closed set of names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -396,6 +410,146 @@ pub enum Truth {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit(pub bool);
 
+/// What ActionRequest — `commission.responsibility.ActionRequest` — holds, apart from where it is in its lifecycle.
+///
+/// The identity and every declared field. The state is deliberately not one: inside the domain it
+/// is carried by the type parameter of [`ActionRequest<S>`], and at a boundary by [`ActionRequestSnapshot::state`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionRequestData {
+    /// The identity: `action_request_id` — `commission.responsibility.ActionRequestId`.
+    pub action_request_id: ActionRequestId,
+    /// `run_id` — `commission.responsibility.RunId`.
+    ///
+    /// Carries `requests`: `commission.responsibility.Run` owns many `commission.responsibility.ActionRequest`.
+    pub run_id: RunId,
+    /// `case_id` — `commission.responsibility.CaseId`.
+    ///
+    /// Carries `case`: `commission.responsibility.ActionRequest` references one `commission.responsibility.Case`.
+    pub case_id: CaseId,
+    /// `expected_case_revision` — `Integer`.
+    pub expected_case_revision: i64,
+    /// `action` — `String`.
+    pub action: String,
+    /// `arguments` — `commission.responsibility.ProposedActionArguments`.
+    pub arguments: ProposedActionArguments,
+}
+
+/// The states of `commission.responsibility.ActionRequest`, at the type level.
+///
+/// One marker type per declared state, sealed: a state the lifecycle does not declare cannot
+/// implement [`Marker`](action_request_state::Marker), so [`ActionRequest<S>`](ActionRequest) can only ever rest in a real state.
+pub mod action_request_state {
+    /// Closes [`Marker`] over the declared states.
+    mod sealed {
+        /// Implemented only by the marker types beside this module.
+        pub trait Sealed {}
+        impl Sealed for super::Requested {}
+    }
+
+    /// A declared state of `ActionRequest`, as a type.
+    pub trait Marker: sealed::Sealed {
+        /// The same state, as the runtime value.
+        const STATE: super::ActionRequestState;
+    }
+
+    /// `Requested`. Where a new instance starts.
+    pub struct Requested;
+
+    impl Marker for Requested {
+        const STATE: super::ActionRequestState = super::ActionRequestState::Requested;
+    }
+}
+
+/// ActionRequest — `commission.responsibility.ActionRequest` — with its lifecycle state carried by the type.
+///
+/// The one constructor rests in `Requested`, and the only way to change `S` is a method generated from
+/// a declared transition. A move the specification does not declare is therefore not an error
+/// case: it does not compile. Where the state is data — wire, storage — use [`ActionRequestSnapshot`]
+/// and [`ActionRequestSnapshot::refine`].
+pub struct ActionRequest<S: action_request_state::Marker> {
+    data: ActionRequestData,
+    state: core::marker::PhantomData<S>,
+}
+
+impl<S: action_request_state::Marker> ActionRequest<S> {
+    /// The state this instance rests in, as the runtime value.
+    pub fn state(&self) -> ActionRequestState {
+        S::STATE
+    }
+
+    /// What it holds.
+    pub fn data(&self) -> &ActionRequestData {
+        &self.data
+    }
+
+    /// Hands the data back, giving up the typed state.
+    pub fn into_data(self) -> ActionRequestData {
+        self.data
+    }
+}
+
+impl ActionRequest<action_request_state::Requested> {
+    /// A new instance, resting in `Requested` — the only state the lifecycle starts one in.
+    pub fn new(data: ActionRequestData) -> Self {
+        Self {
+            data,
+            state: core::marker::PhantomData,
+        }
+    }
+}
+
+/// `commission.responsibility.ActionRequest` as it crosses a boundary: the state as a value beside the data.
+///
+/// Wire and storage know states only at runtime; [`ActionRequestSnapshot::refine`] is the one door back
+/// into the typed lifecycle.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionRequestSnapshot {
+    /// Where the instance is in its lifecycle.
+    pub state: ActionRequestState,
+    /// What it holds.
+    pub data: ActionRequestData,
+}
+
+/// An `ActionRequest` in whichever declared state it was found.
+pub enum AnyActionRequest {
+    /// Resting in `Requested`.
+    Requested(ActionRequest<action_request_state::Requested>),
+}
+
+impl ActionRequestSnapshot {
+    /// Refines the runtime state into the typed one.
+    ///
+    /// Total: every declared state has an arm, and an undeclared state cannot reach here because
+    /// `ActionRequestState` cannot spell one.
+    pub fn refine(self) -> AnyActionRequest {
+        match self.state {
+            ActionRequestState::Requested => AnyActionRequest::Requested(ActionRequest {
+                data: self.data,
+                state: core::marker::PhantomData,
+            }),
+        }
+    }
+}
+
+impl AnyActionRequest {
+    /// The state, as the runtime value.
+    pub fn state(&self) -> ActionRequestState {
+        match self {
+            Self::Requested(_) => ActionRequestState::Requested,
+        }
+    }
+
+    /// Back to the boundary shape.
+    pub fn snapshot(self) -> ActionRequestSnapshot {
+        match self {
+            Self::Requested(instance) => ActionRequestSnapshot {
+                state: ActionRequestState::Requested,
+                data: instance.into_data(),
+            },
+        }
+    }
+}
+
 /// What Agent — `commission.responsibility.Agent` — holds, apart from where it is in its lifecycle.
 ///
 /// The identity and every declared field. The state is deliberately not one: inside the domain it
@@ -668,6 +822,10 @@ pub struct AuthorityDecisionData {
     pub action: String,
     /// `granted` — `Boolean`.
     pub granted: bool,
+    /// `action_request_id` — `commission.responsibility.ActionRequestId`.
+    ///
+    /// Carries `action_request`: `commission.responsibility.AuthorityDecision` references one `commission.responsibility.ActionRequest`.
+    pub action_request_id: ActionRequestId,
 }
 
 /// The states of `commission.responsibility.AuthorityDecision`, at the type level.
@@ -1674,6 +1832,51 @@ pub enum ResumeRunOutcome {
     WrongStateUnknownInstance,
 }
 
+/// RevalidateActionRequest — the input of `commission.responsibility.RevalidateActionRequest`.
+///
+/// Everything it can result in is [`RevalidateActionRequestOutcome`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevalidateActionRequest {
+    /// `action_request_id` — `commission.responsibility.ActionRequestId`.
+    pub action_request_id: ActionRequestId,
+    /// `run_id` — `commission.responsibility.RunId`.
+    pub run_id: RunId,
+    /// `case_id` — `commission.responsibility.CaseId`.
+    pub case_id: CaseId,
+    /// `expected_case_revision` — `Integer`.
+    pub expected_case_revision: i64,
+    /// `action` — `String`.
+    pub action: String,
+    /// `arguments` — `commission.responsibility.ProposedActionArguments`.
+    pub arguments: ProposedActionArguments,
+}
+
+/// Everything `commission.responsibility.RevalidateActionRequest` can result in — one variant per declared outcome.
+///
+/// An infrastructure failure is deliberately not in here: a refusal is a fact about the domain,
+/// a transport fault is a fact about the run, and conflating the two is what the declared
+/// outcomes exist to prevent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RevalidateActionRequestOutcome {
+    /// `stale` — externally decided (the governor's current revision of the case is not the request's expected case revision).
+    Stale {
+        /// Why it was refused: `commission.responsibility.ActionRequestStale`.
+        error: ActionRequestStale,
+    },
+    /// `not-admitted` — externally decided (the current frontier refuses the action).
+    NotAdmitted {
+        /// Why it was refused: `commission.responsibility.ActionNotAdmitted`.
+        error: ActionNotAdmitted,
+    },
+    /// `needs-authority` — externally decided (the current frontier lists the action as ApprovalRequired, naming one capability).
+    NeedsAuthority {
+        /// Why it was refused: `commission.responsibility.ActionNeedsAuthority`.
+        error: ActionNeedsAuthority,
+    },
+    /// `admitted` — otherwise.
+    Admitted,
+}
+
 /// StartRun — the input of `commission.responsibility.StartRun`.
 ///
 /// Everything it can result in is [`StartRunOutcome`].
@@ -1761,6 +1964,33 @@ pub struct RunSuspended {
     pub reason: SuspensionReason,
 }
 
+/// The declared error `commission.responsibility.ActionNeedsAuthority`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionNeedsAuthority {
+    /// `action` — `String`.
+    pub action: String,
+    /// `capability` — `String`.
+    pub capability: String,
+}
+
+/// The declared error `commission.responsibility.ActionNotAdmitted`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionNotAdmitted {
+    /// `action` — `String`.
+    pub action: String,
+    /// `reasons` — `List<String>`.
+    pub reasons: Vec<String>,
+}
+
+/// The declared error `commission.responsibility.ActionRequestStale`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActionRequestStale {
+    /// `expected_case_revision` — `Integer`.
+    pub expected_case_revision: i64,
+    /// `current_case_revision` — `Integer`.
+    pub current_case_revision: i64,
+}
+
 /// The declared error `commission.responsibility.RunStateConflict`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunStateConflict {
@@ -1789,6 +2019,7 @@ pub struct RunStates {
 ///
 /// One trait per obligation in the synthesis plan, each carrying the plan's own contract, and one
 /// per generated behaviour, which [`Generated`](crate::behaviour::Generated) implements.
+/// [`Unimplemented`](obligations::Unimplemented) satisfies every owed trait by refusing in the type system.
 pub mod obligations {
     /// The behaviour `commission.responsibility.ResumeRun` — generated.
     ///
@@ -1799,6 +2030,19 @@ pub mod obligations {
         ///
         /// `Err` is the typed refusal of a request the model declares no outcome for.
         fn resume_run(&mut self, input: super::ResumeRun) -> Result<super::ResumeRunOutcome, crate::obligation::UnmetObligation>;
+    }
+
+    /// The behaviour `commission.responsibility.RevalidateActionRequest` — an implementation obligation.
+    ///
+    /// Why it is not generated: kept an obligation by the fields of error `commission.responsibility.ActionRequestStale`, which the specification gives no source, in `stale`.
+    ///
+    /// Contract: given `commission.responsibility.RevalidateActionRequest` input, decide and enact exactly one outcome. Declared outcomes (declaration order, not selection precedence): `stale` externally decided (the governor's current revision of the case is not the request's expected case revision), error `commission.responsibility.ActionRequestStale`; `not-admitted` externally decided (the current frontier refuses the action), error `commission.responsibility.ActionNotAdmitted`; `needs-authority` externally decided (the current frontier lists the action as ApprovalRequired, naming one capability), error `commission.responsibility.ActionNeedsAuthority`; `admitted` otherwise.
+    pub trait RevalidateActionRequestBehavior {
+        /// Decides and enacts exactly one declared outcome of `commission.responsibility.RevalidateActionRequest`.
+        ///
+        /// `Err` is the typed refusal of an obligation nothing has satisfied; a satisfying
+        /// implementation never returns it.
+        fn revalidate_action_request(&mut self, input: super::RevalidateActionRequest) -> Result<super::RevalidateActionRequestOutcome, crate::obligation::UnmetObligation>;
     }
 
     /// The behaviour `commission.responsibility.StartRun` — generated.
@@ -1834,4 +2078,15 @@ pub mod obligations {
         fn run_states(&self) -> Result<Vec<super::RunStates>, crate::obligation::UnmetObligation>;
     }
 
+    /// Every obligation of this bounded context, refused in the type system.
+    ///
+    /// Each method returns the typed refusal naming what is owed — never a panic, never a guessed
+    /// value — so a workspace built on this stub compiles and reports its own gaps.
+    pub struct Unimplemented;
+
+    impl RevalidateActionRequestBehavior for Unimplemented {
+        fn revalidate_action_request(&mut self, _input: super::RevalidateActionRequest) -> Result<super::RevalidateActionRequestOutcome, crate::obligation::UnmetObligation> {
+            Err(crate::obligation::UnmetObligation { capability: "command behaviour", source: "commission.responsibility.RevalidateActionRequest" })
+        }
+    }
 }

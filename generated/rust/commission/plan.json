@@ -2,14 +2,28 @@
   "provenance": {
     "system": "commission",
     "specification_version": "v1",
-    "source_digest": "277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4",
-    "contract_digest": "b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a"
+    "source_digest": "8baad8a2a232f1823d8fce586ddd35c901af8923715a1eb1fbc3f62817da8e4f",
+    "contract_digest": "c27daebab1de8a70c1c4985e2a48176db7d5700784cedf99b11902b83a5dea7a"
   },
   "scope": {
     "profile": "component-skeletons",
     "layout": "crate"
   },
   "capabilities": [
+    {
+      "kind": "domain_type",
+      "source": "commission.responsibility.ActionRequest.State",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "domain_type",
+      "source": "commission.responsibility.ActionRequestId",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
     {
       "kind": "domain_type",
       "source": "commission.responsibility.ActionStatus",
@@ -348,6 +362,13 @@
     },
     {
       "kind": "entity_lifecycle",
+      "source": "commission.responsibility.ActionRequest",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "entity_lifecycle",
       "source": "commission.responsibility.Agent",
       "disposition": {
         "disposition": "generated"
@@ -425,6 +446,25 @@
     },
     {
       "kind": "command_contract",
+      "source": "commission.responsibility.RevalidateActionRequest",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_behavior",
+      "source": "commission.responsibility.RevalidateActionRequest",
+      "disposition": {
+        "disposition": "obligation",
+        "reason": {
+          "class": "undetermined",
+          "construct": "the fields of error `commission.responsibility.ActionRequestStale`, which the specification gives no source, in `stale`"
+        },
+        "contract": "given `commission.responsibility.RevalidateActionRequest` input, decide and enact exactly one outcome. Declared outcomes (declaration order, not selection precedence): `stale` externally decided (the governor's current revision of the case is not the request's expected case revision), error `commission.responsibility.ActionRequestStale`; `not-admitted` externally decided (the current frontier refuses the action), error `commission.responsibility.ActionNotAdmitted`; `needs-authority` externally decided (the current frontier lists the action as ApprovalRequired, naming one capability), error `commission.responsibility.ActionNeedsAuthority`; `admitted` otherwise"
+      }
+    },
+    {
+      "kind": "command_contract",
       "source": "commission.responsibility.StartRun",
       "disposition": {
         "disposition": "generated"
@@ -468,6 +508,27 @@
     {
       "kind": "event_type",
       "source": "commission.responsibility.RunSuspended",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "error_type",
+      "source": "commission.responsibility.ActionNeedsAuthority",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "error_type",
+      "source": "commission.responsibility.ActionNotAdmitted",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "error_type",
+      "source": "commission.responsibility.ActionRequestStale",
       "disposition": {
         "disposition": "generated"
       }

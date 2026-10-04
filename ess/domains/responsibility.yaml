@@ -641,6 +641,8 @@ commands:
   # when its action is admissible now. Answered in this order.
   - name: commission.responsibility.RevalidateActionRequest
     input:
+      - name: action_request_id
+        type: commission.responsibility.ActionRequestId
       - name: run_id
         type: commission.responsibility.RunId
       - name: case_id

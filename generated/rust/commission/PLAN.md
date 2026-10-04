@@ -1,19 +1,21 @@
 <!--
   generated from commission v1
-  model digest 277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4
-  contract digest b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a
+  model digest 8baad8a2a232f1823d8fce586ddd35c901af8923715a1eb1fbc3f62817da8e4f
+  contract digest c27daebab1de8a70c1c4985e2a48176db7d5700784cedf99b11902b83a5dea7a
   do not edit: regenerate with `ess synthesize --layout crate`
 -->
 # Synthesis plan — commission v1
 
 Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regenerate with `ess synthesize --layout crate`.
 
-69 capabilities: **69 generated**, **0 obligations**, **0 refused**. An obligation is yours to implement against its contract; a refusal is a fact about this synthesis scope, not about the specification.
+77 capabilities: **76 generated**, **1 obligations**, **0 refused**. An obligation is yours to implement against its contract; a refusal is a fact about this synthesis scope, not about the specification.
 
 ## Generated
 
 | capability | source |
 | --- | --- |
+| domain type | `commission.responsibility.ActionRequest.State` |
+| domain type | `commission.responsibility.ActionRequestId` |
 | domain type | `commission.responsibility.ActionStatus` |
 | domain type | `commission.responsibility.Admission` |
 | domain type | `commission.responsibility.AdmissionNeedsAuthority` |
@@ -62,6 +64,7 @@ Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regen
 | domain type | `commission.responsibility.SuspensionReason` |
 | domain type | `commission.responsibility.Truth` |
 | domain type | `commission.responsibility.Unit` |
+| entity lifecycle | `commission.responsibility.ActionRequest` |
 | entity lifecycle | `commission.responsibility.Agent` |
 | entity lifecycle | `commission.responsibility.AgentRevision` |
 | entity lifecycle | `commission.responsibility.AuthorityDecision` |
@@ -73,6 +76,7 @@ Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regen
 | entity lifecycle | `commission.responsibility.Run` |
 | command contract | `commission.responsibility.ResumeRun` |
 | command behaviour | `commission.responsibility.ResumeRun` |
+| command contract | `commission.responsibility.RevalidateActionRequest` |
 | command contract | `commission.responsibility.StartRun` |
 | command behaviour | `commission.responsibility.StartRun` |
 | command contract | `commission.responsibility.SuspendRun` |
@@ -80,6 +84,9 @@ Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regen
 | event type | `commission.responsibility.RunResumed` |
 | event type | `commission.responsibility.RunStarted` |
 | event type | `commission.responsibility.RunSuspended` |
+| error type | `commission.responsibility.ActionNeedsAuthority` |
+| error type | `commission.responsibility.ActionNotAdmitted` |
+| error type | `commission.responsibility.ActionRequestStale` |
 | error type | `commission.responsibility.RunStateConflict` |
 | view type | `commission.responsibility.RunStates` |
 | view query | `commission.responsibility.RunStates` |
@@ -97,6 +104,7 @@ What the specification fully determines is generated; what it cannot determine i
 
 | capability | source | why not generated | contract |
 | --- | --- | --- | --- |
+| command behaviour | `commission.responsibility.RevalidateActionRequest` | kept an obligation by the fields of error `commission.responsibility.ActionRequestStale`, which the specification gives no source, in `stale` | given `commission.responsibility.RevalidateActionRequest` input, decide and enact exactly one outcome. Declared outcomes (declaration order, not selection precedence): `stale` externally decided (the governor's current revision of the case is not the request's expected case revision), error `commission.responsibility.ActionRequestStale`; `not-admitted` externally decided (the current frontier refuses the action), error `commission.responsibility.ActionNotAdmitted`; `needs-authority` externally decided (the current frontier lists the action as ApprovalRequired, naming one capability), error `commission.responsibility.ActionNeedsAuthority`; `admitted` otherwise |
 
 ## Refused — not represented by this synthesis
 
