@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:port-skeleton
 kind: story
-status: proposed
+status: implemented
 title: 'Spec-first skeleton: the port vocabulary in ESS, generated once, with empty module and fake files'
 summary: Declares the settled governor, executor, authority, observation/evidence and run-outcome types in ESS, regenerates once, removes the bootstrap contracts and Canon, and creates the empty port, module, fake and kit files with their mod lines.
 relations:
@@ -62,9 +62,11 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 4
+revision: 8
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T02:07:09Z", actor: "human:timo", revision: 3}
+- {from: "proposed", to: "active", at: "2026-10-04T02:18:12Z", actor: "human:timo", revision: 5}
+- {from: "active", to: "implemented", at: "2026-10-04T02:45:21Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"test_result":1,"review_outcome":2,"verification":1}}}
 ---
 ## Outcome
 
@@ -191,6 +193,35 @@ The two Run commands are the domain's first commands, so `ess verify conform syn
 scenarios. They are answered by `story:commission-ess-conformance` (through the behaviour of
 `story:run-outcomes`), or named in `ess/SKIPPED.md` there.
 
+### Coordinator decisions (wave 2026-10-04-w3)
+
+Phase 1 found that ESS 0.52.0 cannot hold some declarations above as written (a union variant must
+carry exactly one type; there is no unit type and an empty struct is refused), and that the two
+`Run` commands leave synthesis with 6 refusals because nothing creates a `Run`. These decisions
+replace the conflicting parts above; where they differ, this section wins.
+
+1. **Variants without payload.** A type whose variants all lack a payload is an `enum`. In a union
+   that mixes both, a payload-less variant carries `commission.responsibility.Unit`, a `newtype` of
+   `Boolean` whose value is always `true`, declared once. This is a stand-in until ESS supports unit
+   variants (filed on beyond10x/ess); it is removed then.
+2. **Variants with named fields** carry one struct each, named `<Union><Variant>`, holding exactly
+   the fields named above: `CompletionDeterminationComplete { outcome: String }`,
+   `ExecutorOutcomeProposedAction { action: String, arguments: ProposedActionArguments }`,
+   `ExecutorOutcomeNeedsHumanJudgment { request: HumanDecisionRequest }`,
+   `ExecutorOutcomeSuspended { reason: SuspensionReason }`,
+   `AuthorityVerdictDeny { reason: String }`, `AuthorityVerdictApprovalRequired { request: String }`,
+   and for `RunOutcome` the six variant structs with the fields listed above.
+3. **Undeclared payloads.** `HumanDecisionRequest` is a `newtype` of `Json`. In `SuspensionReason`,
+   `Authority`, `Time`, `Budget` and `ExternalAvailability` carry `Json`; `Evidence` carries
+   `List<String>`, the same type as `RunOutcome`'s `NeedsExternalEvidence.requirements`; `Human`
+   and `Dependency` stay as declared above.
+4. **No `Run` commands here.** The `Suspended` state, the suspend and resume transitions and their
+   commands move to `story:run-outcomes`, which owns that behaviour and now edits `ess/` for it. This
+   story declares no command, so synthesis stays at 0 scenarios and 0 refusals. `RunOutcome` itself
+   stays here.
+
+Acceptance item 1 reads "unions with exactly the variants" against these shapes. Acceptance item 2's `Run` states and transitions (`Suspended`, suspend, resume) move to `story:run-outcomes` with decision 4; this story's test does not check them. The union tag is `kind`; `Unit` carries no invariant (synthesis refuses one no view publishes, `ESS-SYNTH-013`).
+
 ### Not here
 
 - **The admission result** stays with `story:frontier-admission`. Its refusal carries a
@@ -266,3 +297,5 @@ passes. The test checks these expectations:
 `story:observation-evidence-ports` and `story:run-outcomes` § ESS (the declarations, moved);
 `docs/contracts/commission-executor.md`, `docs/contracts/evidence.md`; Atlas ADRs 0076, 0080; re-plan for
 wider waves (operator instruction of 2026-10-04).
+
+

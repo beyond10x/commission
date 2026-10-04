@@ -25,7 +25,11 @@ scope:
   path: crates/commission-xtask/
 - confidence: cited
   path: crates/commission/src/outcome.rs
-revision: 14
+- confidence: cited
+  path: ess/domains/responsibility.yaml
+- confidence: cited
+  path: generated/rust/commission/
+revision: 16
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -112,6 +116,23 @@ The two Run commands carry conformance scenarios from `story:port-skeleton` on.
 `story:commission-ess-conformance` answers them through this story's behaviour, or names them in
 `ess/SKIPPED.md`.
 
+### Moved here from story:port-skeleton (wave 2026-10-04-w3)
+
+`Run` gains the state `Suspended` (neither `Running` nor `Suspended` is terminal) and two
+transitions, suspend (`Running` → `Suspended`) and resume (`Suspended` → `Running`), each with its
+command; the suspend command carries a `SuspensionReason`. Synthesis needs, for 0 refusals:
+
+- a way a `Run` comes to exist that the suite can drive (a creating command, or the creation this
+  story's behaviour already performs, declared as one), its event, and the events of suspend and
+  resume with a source for every payload field;
+- a wrong-state outcome and error for suspend on a `Run` that is not `Running` and resume on one
+  that is not `Suspended`;
+- whether `Run` stores the suspension reason (a field) or only reports it in the event.
+
+Each is settled in this story before its first commit; a shape the story cannot settle is a
+`decision-blocker`, never a guess. The red test of the first commit is
+`drift_passes_on_the_committed_tree`, as for every story that edits `ess/`.
+
 ## Domain relations
 
 - Commission -> Run, one-to-many, the commission owns its runs:
@@ -171,3 +192,4 @@ decision, using the fakes. These are its expectations:
 
 TASKBOARD M-007 (build pack `TASKBOARD.md` § Commission); `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md`
 §§ 14, 35; operator decision of 2026-10-04 on run continuity; Atlas ADR 0080.
+
