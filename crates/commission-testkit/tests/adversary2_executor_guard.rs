@@ -127,6 +127,7 @@ fn fixture(case: &str, manifest_tail: &str, stubs: &[(&str, &str)]) -> PathBuf {
 
 fn lock(dir: &Path) {
     let out = Command::new(cargo())
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(dir)
         .args(["generate-lockfile", "--offline"])
         .output()
@@ -218,6 +219,7 @@ fn adversary2_guard_refuses_a_deduplicated_proc_macro_provider() {
     );
     lock(&dir);
     let listing = Command::new(cargo())
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(&dir)
         .args([
             "tree",

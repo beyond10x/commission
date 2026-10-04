@@ -138,6 +138,7 @@ fn fixture(case: &str, manifest_tail: &str, stubs: &[(&str, &str)]) -> PathBuf {
     .unwrap_or_else(|error| panic!("copy deny list: {error}"));
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let lock = Command::new(&cargo)
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(&dir)
         .args(["generate-lockfile", "--offline"])
         .output()
@@ -155,6 +156,7 @@ fn fixture(case: &str, manifest_tail: &str, stubs: &[(&str, &str)]) -> PathBuf {
 fn tree(dir: &Path, extra: &[&str]) -> String {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let out = Command::new(cargo)
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(dir)
         .args([
             "tree",
