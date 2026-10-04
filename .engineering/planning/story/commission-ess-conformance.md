@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:commission-ess-conformance
 kind: story
-status: proposed
+status: implemented
 title: task check runs Commission's synthesized ESS conformance suite
 summary: Commission's ESS specification held to its synthesized suite through a Rust target on ess-conformance, skips named in ess/SKIPPED.md.
 refs:
@@ -23,14 +23,22 @@ scope:
 - confidence: inferred
   path: crates/commission-conformance/
 - confidence: cited
+  path: crates/commission-xtask/tests/adversary_pass2.rs
+- confidence: cited
+  path: crates/commission-xtask/tests/checks.rs
+- confidence: cited
+  path: crates/commission/tests/generated_model.rs
+- confidence: cited
   path: ess/SKIPPED.md
 - confidence: inferred
   path: ess/domains/responsibility.yaml
 - confidence: inferred
   path: generated/rust/commission/
-revision: 7
+revision: 11
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"review_outcome":1}}}
+- {from: "proposed", to: "active", at: "2026-10-04T04:26:36Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":1}}}
+- {from: "active", to: "implemented", at: "2026-10-04T05:42:48Z", actor: "human:timo", revision: 11, decided_on: {"recorded":{"test_result":1,"review_outcome":4,"verification":1}}}
 ---
 ## Outcome
 
@@ -129,3 +137,16 @@ checks these expectations against the report document:
 TASKBOARD I-007 (build pack `TASKBOARD.md` § Integration, "ESS spec for Commission");
 `epic:commission-core` Acceptance; Atlas `epic:ga-commission-core` Acceptance (`ess/SKIPPED.md`);
 `AGENTS.md` § ESS; Atlas ADR 0080.
+
+### Coordinator and adversary decisions (wave 2026-10-04-w7)
+
+- The Rust runner reports a scenario it cannot answer as `unsupported`; the check treats it like
+  `skipped` (named in `ess/SKIPPED.md` with a reason). All 13 synthesized scenarios are answered;
+  `SKIPPED.md` is empty.
+- `skipped_file_starts_empty` is replaced by a test that every `SKIPPED.md` entry names a synthesized
+  scenario and gives a reason; `checks.rs` copies the new crate.
+- Pass 1, fixed: the codec keeps numbers exact (no `f64`); a forced stale picks a different revision;
+  `conform.rs` refuses a `SKIPPED.md` entry naming a passing scenario. No scenario floor (no-op).
+- Pass 2, fixed: no overflow at `i64::MIN` in the forced stale; `uuid` refuses non-canonical text;
+  the codec doc no longer claims dead fallbacks; `read_json` refuses a number it cannot hold;
+  `task check` runs drift and no-hand-model before conform.

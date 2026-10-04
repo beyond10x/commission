@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:local-runtime-loop
 kind: story
-status: proposed
+status: implemented
 title: Local runtime loop over a fake governor and a fake executor
 summary: 'run_until_blocked: load case, frontier, executor, revalidate, authority, derived outcome; no effects executed.'
 refs:
@@ -21,9 +21,11 @@ scope:
   path: crates/commission-testkit/tests/runtime_loop.rs
 - confidence: cited
   path: crates/commission/src/runtime.rs
-revision: 13
+revision: 18
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 7, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "proposed", to: "active", at: "2026-10-04T04:26:36Z", actor: "human:timo", revision: 14, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "active", to: "implemented", at: "2026-10-04T05:42:48Z", actor: "human:timo", revision: 18, decided_on: {"recorded":{"test_result":1,"review_outcome":6,"verification":1}}}
 ---
 ## Outcome
 
@@ -153,3 +155,30 @@ TASKBOARD M-009 (build pack `TASKBOARD.md` § Commission); Atlas `docs/design/go
 loop decides what Continue after a NoUsefulAction means: it must not re-ask the same executor on an
 unchanged frontier without bound. Settle a rule here (for example: NoUsefulAction twice on the same
 frontier revision ends the run as no admissible action) and test it.
+
+### Adversary decisions (wave 2026-10-04-w7, pass 1)
+
+- F1 (blocker): the specification wins. A Run is bound to one case revision
+  (`ess/domains/responsibility.yaml:386,390`); the loop ends when the case moves, with `NoAdmissibleAction` for now, and the phase-1
+  expectation that a new revision restarts the stall count is corrected to match (fixed). The
+  outcome that names a moved case is decision-blocker:run-stale-outcome.
+- F2: once a Run is started, `LoopError` names it, and a governor failure suspends the Run before
+  the error returns (fixed).
+- F3: the stall bound is keyed on the frontier's revision (fixed).
+- J1, left for story:effect-invocation: a Deny reason or provider-failure message does not reach
+  `LoopEnd`, so `NoAdmissibleAction` reads the same as an empty frontier (no-op here).
+- J2, pre-existing, left for a specification story: the Run lifecycle has no terminal state
+  (`responsibility.yaml:400-405`), so a loop that ends other than suspended leaves its Run
+  `Running` and `ResumeRun` cannot continue it (no-op here).
+
+### Adversary decisions (wave 2026-10-04-w7, pass 2)
+
+- F-A: a stale revalidation does not count toward the stall bound; the next load ends the run,
+  `Completed` when the case is complete (fixed).
+- F-B: the w5 note stands. A request equal to one already admitted in this Run counts as idle, so
+  the loop is bounded without effects (fixed).
+- F-C: an executor `Suspended` suspends the Run with the executor's own reason even when the
+  observation fails; the error carries both (fixed).
+- J-1: `LoopError` reports the suspension reason the loop used (fixed).
+- Left open: a governor flipping between revisions can keep the loop alive through stale answers;
+  decision-blocker:run-stale-outcome covers how such a run should end.

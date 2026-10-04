@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:adapter-conformance-suites
 kind: story
-status: proposed
+status: implemented
 title: Governor and AuthorityProvider conformance suites an adapter crate can run
 summary: Public test kits for the Governor and AuthorityProvider ports, green on Commission's fakes and red on broken ones.
 refs:
@@ -25,9 +25,11 @@ scope:
   path: crates/commission-testkit/src/kits/governor.rs
 - confidence: inferred
   path: crates/commission-testkit/tests/kits.rs
-revision: 9
+revision: 12
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "proposed", to: "active", at: "2026-10-04T04:26:36Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "active", to: "implemented", at: "2026-10-04T05:42:47Z", actor: "human:timo", revision: 12, decided_on: {"recorded":{"test_result":1,"review_outcome":5,"verification":1}}}
 ---
 ## Outcome
 
@@ -123,3 +125,18 @@ crate other than `b10x-commission`, passes with these expectations:
 
 TASKBOARD M-010 (build pack `TASKBOARD.md` § Commission); `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md`
 § 52; `epic:governor-adapter` Acceptance; Atlas ADR 0080.
+
+### Adversary decisions (wave 2026-10-04-w7)
+
+- Pass 1, all fixed: current-frontier reads the frontier before and after the case moves;
+  observation-not-evidence sends 2 observations and makes a further call before reading evidence;
+  evidence-observation-ids observes 3 and names 2; each check runs under `catch_unwind`, so a
+  panicking adapter fails only that check; each backing carries decoy capabilities.
+- Pass 2, all fixed: observation-not-evidence also calls `frontier` and `completion` first;
+  superseded-revision moves the case twice; a new check `held-case-open` requires `completion` to
+  answer `Open` for the held case; after the move current-frontier requires only the new revision;
+  each as-given check also asks a decoy; backing-failure switches a shared backing to failing after
+  an allow.
+- Pass 2 finding 6 made the phase-1 fake provider wrong (it kept a fixed table). Coordinator
+  option A: `FakeAuthorityFixture` reads the live backing at each decision; no other phase-1 line
+  changed.
