@@ -256,6 +256,32 @@ types:
       - name: reasons
         type: List<String>
 
+  # story:frontier-admission: how the current frontier sorts one proposed action. An action the
+  # frontier does not list, or lists as ApprovalRequired with no capability to ask for, is refused.
+  - name: commission.responsibility.Admission
+    kind: union
+    tag: kind
+    variants:
+      Admissible: commission.responsibility.Unit
+      NeedsAuthority: commission.responsibility.AdmissionNeedsAuthority
+      Refused: commission.responsibility.AdmissionRefused
+
+  # The capability the frontier names for an ApprovalRequired action.
+  - name: commission.responsibility.AdmissionNeedsAuthority
+    kind: struct
+    fields:
+      - name: capability
+        type: String
+
+  # The refused action and the reasons the frontier gives for it; empty when it gives none.
+  - name: commission.responsibility.AdmissionRefused
+    kind: struct
+    fields:
+      - name: action
+        type: String
+      - name: reasons
+        type: List<String>
+
 entities:
   # Reusable worker configuration.
   - name: commission.responsibility.Agent
