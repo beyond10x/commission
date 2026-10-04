@@ -1,0 +1,79 @@
+{
+  "format": "b10x-product-landing/1",
+  "product": {
+    "name": "Commission",
+    "mark": "Co",
+    "eyebrow": "Governed autonomy · bootstrap",
+    "promise": ["Build agents", "you can give", "responsibility to."],
+    "lede": "Commission is the Rust SDK and runtime model for governed autonomous workers. It binds a reusable agent revision to a durable case, under a governor that decides what the agent may do next. The executor proposes; it never marks a case complete.",
+    "actions": [
+      {"label": "Read the model", "href": "/docs/", "kind": "primary"},
+      {"label": "What exists today", "href": "#status"}
+    ],
+    "meta": "Rust · specified in ESS · domain-neutral · Apache-2.0"
+  },
+  "sections": [
+    {
+      "kind": "features",
+      "eyebrow": "The model",
+      "title": "Responsibility, not just an agent.",
+      "lede": "An agent is configuration. What you hand over is a case, and what carries responsibility for it is a commission.",
+      "items": [
+        {"title": "Agent and revision", "description": "Reusable worker configuration. A commission names one agent revision, not the agent in general.", "status": "shipped"},
+        {"title": "Case and commission", "description": "A case is durable work under a protocol; the governor holds its truth. A commission binds one agent revision to one case, with a principal and an authority context.", "status": "shipped"},
+        {"title": "Run", "description": "One bounded period of execution. A run records the case revision it started against, so a proposal made on another revision is stale.", "status": "shipped"},
+        {"title": "Governor and frontier", "description": "The governor returns a frontier: what is known and unknown, which obligations are open, which actions are admissible and which need authority. Completion is its determination alone.", "status": "shipped"},
+        {"title": "AgentExecutor", "description": "Proposes an action from the frontier. Loom is the native executor; harnesses, workflows, people and test fakes implement the same contract.", "status": "shipped"},
+        {"title": "Effect invocation", "description": "The runtime, not the executor, invokes an action's effect, after rechecking frontier, case revision and authority. Decided in Atlas ADR 0082; not built.", "status": "decided"}
+      ]
+    },
+    {
+      "kind": "flow",
+      "eyebrow": "A run",
+      "title": "Propose, recheck, then act.",
+      "lede": "A selection made on stale state is not permission. The ports and checks for the first four steps exist; the loop that runs them in this order is planned, and the last step is decided design, not shipped code.",
+      "steps": [
+        {"label": "Govern", "title": "Frontier", "description": "The governor issues a frontier for the current case revision."},
+        {"label": "Propose", "title": "Executor", "description": "The executor picks an action the frontier lists. Nothing else it says is trusted."},
+        {"label": "Recheck", "title": "Revalidate", "description": "Stale if the case revision moved; refused if the current frontier no longer admits it."},
+        {"label": "Authorize", "title": "Authority at the call", "description": "Allow, deny or approval required. A provider that fails never allows."},
+        {"label": "Act", "title": "Invoke, once", "description": "Decided design (ADR 0082): the runtime invokes the effect. Not built."}
+      ]
+    },
+    {
+      "kind": "domain-graph",
+      "eyebrow": "The specification",
+      "title": "The responsibility model, as ESS declares it.",
+      "lede": "Generated from the ESS specification by commission-docs. The Rust model is generated from the same source and never written by hand.",
+      "data": "docs/reference/domain-graph.json"
+    },
+    {
+      "kind": "status",
+      "eyebrow": "Status",
+      "title": "Bootstrap. Here is exactly what exists.",
+      "lede": "Shipped means code on main that runs today; there is no release yet. Decided means recorded in an architecture decision, not built. Planned means on the plan only.",
+      "items": [
+        {"label": "Responsibility model", "status": "shipped", "detail": "Generated from ess/ into Rust, re-exported as b10x_commission::model."},
+        {"label": "Governor, AgentExecutor and AuthorityProvider ports", "status": "shipped", "detail": "A failing authority provider is turned into a refusal, never an allow."},
+        {"label": "Observation and evidence ports", "status": "shipped", "detail": "Nothing turns an observation, executor output or trace into evidence."},
+        {"label": "Frontier admission", "status": "shipped", "detail": "The least-authority entry wins when an action is listed more than once."},
+        {"label": "Action-request revalidation", "status": "shipped", "detail": "Stale revision, frontier admission and approval required, checked immediately before use."},
+        {"label": "Run outcomes; start, suspend and resume", "status": "shipped", "detail": "Runs are held in memory; a suspended run does not survive a restart."},
+        {"label": "Test fakes for governor, executor and authority", "status": "shipped", "detail": "In b10x-commission-testkit."},
+        {"label": "Effect invocation by the runtime", "status": "decided", "detail": "Atlas ADR 0082, decided 2026-10-04."},
+        {"label": "Local runtime loop", "status": "planned", "detail": "The module exists and is empty."},
+        {"label": "Adapter conformance kits", "status": "planned", "detail": "For governor and authority-provider adapters."}
+      ]
+    },
+    {
+      "kind": "related",
+      "eyebrow": "Related tools",
+      "title": "Around Commission.",
+      "tools": [
+        {"name": "Loom", "description": "The native executor. It implements Commission's execution contracts; Commission core does not depend on it.", "href": "https://beyond10x.github.io/loom/"},
+        {"name": "ESS", "description": "Executable system specifications: Commission's model is specified and generated with it.", "href": "https://beyond10x.github.io/ess/"},
+        {"name": "AEP", "description": "One governor implementation. Commission itself is domain-neutral.", "href": "https://beyond10x.github.io/aep/"}
+      ]
+    }
+  ]
+}
