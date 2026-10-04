@@ -383,6 +383,7 @@ fn repo_copy(case: &Path, with_generated: bool) -> PathBuf {
     for dir in [
         "ess",
         "crates/commission",
+        "crates/commission-docs",
         "crates/commission-testkit",
         "crates/commission-xtask",
         "crates/commission-conformance",

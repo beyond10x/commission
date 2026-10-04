@@ -440,6 +440,7 @@ fn skeleton_lands_port_vocabulary_and_modules() {
     // 5. The real dependency tree of b10x-commission names no b10x-canon.
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let out = Command::new(cargo)
+        .env("CARGO_TERM_COLOR", "never")
         .current_dir(&root)
         .args([
             "tree",
