@@ -10,47 +10,30 @@ refs:
   reference: M-004
 relations:
 - decomposes: epic:commission-core
-- depends_on: story:frontier-admission
-- depends_on: story:governor-port
 - serves: vision:O1
 - serves: vision:O2
 - serves: vision:governed-autonomy
+- depends_on: story:port-skeleton
 scope:
-- confidence: cited
-  path: AGENTS.md
-- confidence: cited
-  path: Cargo.lock
 - confidence: cited
   path: Taskfile.yml
 - confidence: cited
   path: crates/commission-testkit/src/fake_executor.rs
 - confidence: inferred
-  path: crates/commission-testkit/src/lib.rs
-- confidence: inferred
   path: crates/commission-testkit/tests/executor_port.rs
 - confidence: cited
-  path: crates/commission/Cargo.toml
-- confidence: cited
-  path: crates/commission/src/lib.rs
-- confidence: cited
   path: crates/commission/src/ports/executor.rs
-- confidence: cited
-  path: crates/commission/src/ports/mod.rs
-- confidence: cited
-  path: ess/domains/responsibility.yaml
-- confidence: cited
-  path: generated/rust/commission/
 - confidence: inferred
   path: model-provider-deny.txt
-revision: 8
+revision: 10
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":2}}}
 ---
 ## Outcome
 
-The `AgentExecutor` port gets its own module, `crates/commission/src/ports/executor.rs`. Given the
-commission and the current frontier, an executor returns one generated `ExecutorOutcome`. The
-outcome is one of five:
+The `AgentExecutor` port gets its own module, `crates/commission/src/ports/executor.rs`, which
+`story:port-skeleton` creates empty with its `mod` line. Given the commission and the current
+frontier, an executor returns one generated `ExecutorOutcome`. The outcome is one of five:
 
 - a proposed action with arguments;
 - a need for human judgment;
@@ -58,73 +41,65 @@ outcome is one of five:
 - no useful action;
 - completed local reasoning.
 
-No variant marks the case complete. The generated enum replaces the bootstrap one
-(`crates/commission/src/lib.rs:24-37`), which was written by hand and has no
-`CompletedLocalReasoning`. The generated enum also replaces the bootstrap trait (`lib.rs:53-55`).
+No variant marks the case complete. The generated union (declared by `story:port-skeleton`)
+replaces the bootstrap enum, which was written by hand and had no `CompletedLocalReasoning`;
+`story:port-skeleton` deletes that enum and the bootstrap trait from `crates/commission/src/lib.rs`,
+and this story writes the trait anew over generated types.
 
-A scripted fake executor goes in `crates/commission-testkit/src/fake_executor.rs`, in the testkit
-crate created by `story:governor-port`. It returns whatever outcome its script names.
+A scripted fake executor goes in `crates/commission-testkit/src/fake_executor.rs`, created empty by
+`story:port-skeleton`. It returns whatever outcome its script names.
 
 Commission stays an SDK, not an LLM harness. The dependency guard is Rust, inside this story's
-test (`AGENTS.md:35`). The test reads `cargo tree -p b10x-commission -e normal --prefix none` and
-fails when the listing names `b10x-loom` or a crate on the repository's model-provider deny list.
-The deny list is `model-provider-deny.txt` at the repository root, beside `Taskfile.yml`. A new
-task, `deps-guard`, runs that test file (`cargo test -p b10x-commission-testkit --test
+test (`AGENTS.md` § Rules). The test reads `cargo tree -p b10x-commission -e normal --prefix none`
+and fails when the listing names `b10x-loom` or a crate on the repository's model-provider deny
+list. The deny list is `model-provider-deny.txt` at the repository root, beside `Taskfile.yml`. A
+new task, `deps-guard`, runs that test file (`cargo test -p b10x-commission-testkit --test
 executor_port`), and `check` lists it as its own step. The rule comes from Atlas ADR 0075: Loom
 depends on Commission, never the reverse.
 
-**The Canon dependency goes.** The executor receives the generated `commission.responsibility.Frontier`
-(`story:ess-hard-gate`). This story replaces the last bootstrap signatures that name Canon types:
-`ExecutorOutcome::ProposedAction { action: ActionId, … }` and
-`AgentExecutor::run(&self, &Commission, &Frontier)` (`crates/commission/src/lib.rs:9`, `:24-37`,
-`:53-55`). With them go the `use b10x_canon` line, the `b10x-canon` dependency in
-`crates/commission/Cargo.toml:9`, its entries in `Cargo.lock`, and the `AGENTS.md` § Work bullet that
-describes the Canon pin. No Commission story gives a reason to keep it; a later story that needs
-Canon adds it back and says why.
+**The Canon dependency is gone before this story starts.** The executor receives the generated
+`commission.responsibility.Frontier` (`story:ess-hard-gate`). The removal of the bootstrap
+signatures that named Canon types, of the `use b10x_canon` line, of the `b10x-canon` dependency
+and its `Cargo.lock` entries, and of the `AGENTS.md` § Work bullet about the Canon pin moved to
+`story:port-skeleton`, because each of those edits lands on a file several stories shared. This
+story's test still holds the result (Acceptance 5). A later story that needs Canon adds it back and
+says why.
 
-**Type ownership.** This story declares two types, and later stories only consume them:
-
-- **`SuspensionReason`.** The payload of `ExecutorOutcome::Suspended`
-  (`docs/contracts/commission-executor.md:40-42`). `story:run-outcomes` uses it for the run's
-  suspended outcome and for the Run's `Suspended` state.
-- **`ProposedActionArguments`.** The arguments type of a proposed action.
-  `story:stale-revision-action-request` carries it on the action request.
+**Type use.** `SuspensionReason`, `ProposedActionArguments` and `HumanDecisionRequest` are declared
+by `story:port-skeleton` from this story's former § ESS. `story:run-outcomes` uses
+`SuspensionReason` for the run's suspended outcome; `story:stale-revision-action-request` carries
+`ProposedActionArguments` on the action request. Neither depends on this story for the types.
 
 ## Shared surface
 
-This story is link 5 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/`. It depends on `story:governor-port`, and
-`story:authority-provider-port` depends on it. The full order is in
-`story:ess-hard-gate` § Shared surface.
+The wave plan is in `story:port-skeleton` § Shared surface, which supersedes the chain in
+`story:ess-hard-gate` § Shared surface. This story depends on `story:port-skeleton` (its module,
+its fake file and the executor types). It runs beside `story:frontier-admission`,
+`story:governor-port` and `story:authority-provider-port`; it uses none of their behaviour, so its
+old ordering edges on `story:frontier-admission` and `story:governor-port` are gone.
 
-The same chain also orders the edits to these files:
-- `Taskfile.yml` (one line in `check`, plus the new `deps-guard` task)
-- `crates/commission/src/lib.rs` and `ports/mod.rs`
-- `crates/commission-testkit/src/lib.rs`
-- `crates/commission/Cargo.toml`, `Cargo.lock` and `AGENTS.md` (the Canon dependency and its bullet)
+`Taskfile.yml` (the `deps-guard` task and one line in `check`) is still shared with
+`story:commission-ess-conformance`, which runs two waves later. `story:frontier-admission`
+regenerates the model in the same wave and may change the frontier's item types; this story's fake
+and test carry `Frontier` values without building or reading items, so that change cannot break it.
 
-## ESS
+`story:run-outcomes` depends on this story for the scripted fake executor.
 
-`commission.responsibility.ExecutorOutcome` (`ess/domains/responsibility.yaml:65-68`) is declared
-as an enum with bare variants. Make these changes in `ess/` first, then pass
-`ess specify validate --path ess` and regenerate with `task generate`.
+## ESS first
 
-1. **Turn it into a `union`.** Each variant carries the payload that
-   `docs/contracts/commission-executor.md:29-47` gives it.
-2. **Declare the proposed action.** A proposed action names an action and its
-   `ProposedActionArguments`, which is a `newtype` of `Json` in place of the contract's
-   `arguments_json: String`. The action is named by a `String`, the same type as a
-   `FrontierAction`'s `action` (`story:ess-hard-gate`), so a proposal is matched against the
-   frontier without conversion. No Canon `ActionId` is involved. Identity, authority and case
-   revision are not part of it (`AGENTS.md:25-27`).
-3. **Declare `SuspensionReason`** as a `union` whose variants are the ones in the history design
-   § 35 (`docs/history/beyond10x-agent-sdk-design-pre-commission-name.md:1477-1485`): authority,
-   human, evidence, time, dependency, budget, external availability. Where a payload's type is
-   declared nowhere in Commission's sources, carry it as String or Json. Do not invent an entity
-   for it.
-4. **Declare the human-judgment request** that `NeedsHumanJudgment` carries in the same way.
-
-These are types, not commands, so they add no conformance scenario.
+- **Specification change: none in this story.** It relies on the declarations
+  `story:port-skeleton` lands from this story's former § ESS: `ExecutorOutcome` as a union
+  (`ProposedAction { action: String, arguments: ProposedActionArguments }`,
+  `NeedsHumanJudgment { request: HumanDecisionRequest }`, `Suspended { reason: SuspensionReason }`,
+  `NoUsefulAction`, `CompletedLocalReasoning`), `ProposedActionArguments` (newtype of `Json`),
+  `HumanDecisionRequest` and `SuspensionReason` (seven variants from the history design § 35,
+  `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md:1477-1485`). None is a command,
+  so there is no conformance scenario to add.
+- **First commit, red.** The test `executor_port_contract` alone, in
+  `crates/commission-testkit/tests/executor_port.rs`, with `model-provider-deny.txt`. It is red
+  because `ports::executor` declares no `AgentExecutor` trait, `fake_executor` holds no fake and the
+  guard's matcher does not exist: the test does not compile.
+- **Then.** The trait, the scripted fake, the guard and the `deps-guard` task, which make it pass.
 
 ## Domain relations
 
@@ -133,17 +108,12 @@ and a frontier and owns neither.
 
 ## Scope
 
-- `crates/commission/src/ports/executor.rs` (new)
-- `crates/commission/src/ports/mod.rs`
-- `crates/commission/src/lib.rs`
-- `crates/commission-testkit/src/fake_executor.rs` (new)
-- `crates/commission-testkit/src/lib.rs`
+- `crates/commission/src/ports/executor.rs` (created empty by `story:port-skeleton`; filled here)
+- `crates/commission-testkit/src/fake_executor.rs` (created empty by `story:port-skeleton`; filled
+  here)
 - `crates/commission-testkit/tests/executor_port.rs` (new)
 - `model-provider-deny.txt` (new)
 - `Taskfile.yml` (task `deps-guard`; one line in `check`)
-- `crates/commission/Cargo.toml`, `Cargo.lock` (the `b10x-canon` dependency removed)
-- `AGENTS.md` (§ Work: the Canon pin bullet removed)
-- `ess/domains/responsibility.yaml` and `generated/rust/commission/` (chain surface)
 
 ## Acceptance
 
@@ -164,11 +134,12 @@ checks these expectations:
 
 ## Notes
 
-- Canon: no change to Canon. Commission stops depending on it here (Outcome).
+- Canon: no change to Canon. Commission stops depending on it in `story:port-skeleton`; this story's
+  guard keeps it out.
 - The deny list is the repository's own and names each crate it refuses.
 
 ## Source
 
 TASKBOARD M-004 (build pack `TASKBOARD.md` § Commission); `docs/contracts/commission-executor.md`;
-Atlas ADRs 0070, 0075; `epic:commission-core` Acceptance ("`cargo tree` shows no model-provider
-crate").
+Atlas ADRs 0070, 0075, 0080; `epic:commission-core` Acceptance ("`cargo tree` shows no
+model-provider crate").

@@ -11,104 +11,98 @@ refs:
 relations:
 - decomposes: epic:commission-core
 - depends_on: story:generated-responsibility-model
-- depends_on: story:agent-executor-port
 - serves: vision:O1
 - serves: vision:O2
 - serves: vision:governed-autonomy
+- depends_on: story:port-skeleton
 scope:
 - confidence: cited
   path: crates/commission-testkit/src/fake_authority.rs
 - confidence: inferred
-  path: crates/commission-testkit/src/lib.rs
-- confidence: inferred
   path: crates/commission-testkit/tests/authority_port.rs
 - confidence: cited
-  path: crates/commission/src/lib.rs
-- confidence: cited
   path: crates/commission/src/ports/authority.rs
-- confidence: cited
-  path: crates/commission/src/ports/mod.rs
-- confidence: cited
-  path: ess/domains/responsibility.yaml
-- confidence: cited
-  path: generated/rust/commission/
-revision: 7
+revision: 9
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":3}}}
 ---
 ## Outcome
 
-The `AuthorityProvider` port gets its own module, `crates/commission/src/ports/authority.rs`.
+The `AuthorityProvider` port gets its own module, `crates/commission/src/ports/authority.rs`, which
+`story:port-skeleton` creates empty with its `mod` line.
 
 Authority stays outside the model. Commission asks the provider at the moment of the call, passing
-the commission and the capability. The commission now carries its principal and authority context
-(`ess/domains/responsibility.yaml:139-142`). The provider answers with one of three decisions:
+the commission and the capability. The commission carries its principal and authority context
+(`ess/domains/responsibility.yaml:177-180`). The provider answers with one of three decisions, the
+generated `AuthorityVerdict`:
 
 - **allow**;
 - **deny**, with the provider's reason;
 - **approval required**, with the provider's request.
 
-The shape comes from the bootstrap trait and enum (`crates/commission/src/lib.rs:57-70`), moved
-onto generated types.
+The shape comes from the bootstrap trait and enum, moved onto generated types. `story:port-skeleton`
+deletes the bootstrap ones from `crates/commission/src/lib.rs` and declares `AuthorityVerdict`;
+this story writes the trait anew.
 
-If the provider fails, the answer is a refusal. A failure never becomes an allow (`AGENTS.md:33-34`,
-"fail toward less authority").
+If the provider fails, the answer is a refusal. A failure never becomes an allow (`AGENTS.md`
+§ Rules, "fail toward less authority").
 
-A static fake provider in `crates/commission-testkit/src/fake_authority.rs` implements the port.
-Its table maps each capability to a decision or to a failure, and it records every principal and
-authority context it is asked about.
+A static fake provider in `crates/commission-testkit/src/fake_authority.rs` (created empty by
+`story:port-skeleton`) implements the port. Its table maps each capability to a decision or to a
+failure, and it records every principal and authority context it is asked about.
 
 **Authority context stays opaque.** `AuthorityContext` is a Commission-local `newtype` of `Json`.
-The spec says its structure "is decided with the AuthorityProvider port (M-005)"
-(`ess/domains/responsibility.yaml:59-63`). This story decides that the structure stays opaque to
-Commission. Commission passes the value to the provider unchanged and never reads it. The provider
-is the only reader. Record this in that comment, in place of the deferral.
+This story's decision, that the structure stays opaque to Commission, that Commission passes the
+value to the provider unchanged and never reads it, and that the provider is the only reader, is
+written into the `AuthorityContext` comment in `ess/` by `story:port-skeleton`, in place of the
+deferral. This story holds the code to it.
 
 ## Shared surface
 
-This story is link 6 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/`. It depends on `story:agent-executor-port`, and
-`story:observation-evidence-ports` depends on it. The full order is in
-`story:ess-hard-gate` § Shared surface. The same chain also orders the edits to
-`crates/commission/src/lib.rs`, `ports/mod.rs` and `crates/commission-testkit/src/lib.rs`.
+The wave plan is in `story:port-skeleton` § Shared surface, which supersedes the chain in
+`story:ess-hard-gate` § Shared surface. This story depends on `story:port-skeleton` (its module,
+its fake file and `AuthorityVerdict`). It runs beside `story:frontier-admission`,
+`story:governor-port` and `story:agent-executor-port`. Its old edge on `story:agent-executor-port`
+was ordering only (the shared `ess/`, `lib.rs`, `ports/mod.rs` and testkit `lib.rs`) and is gone.
 
-## ESS
+`story:run-outcomes` and `story:adapter-conformance-suites` depend on this story for the static fake
+provider.
 
-Make these changes in `ess/domains/responsibility.yaml` first:
+## ESS first
 
-- Declare the decision the port returns as a model type: a `union` of allow, deny with reason, and
-  approval required with request. Give it a name distinct from the `AuthorityDecision` entity.
-- Update the `AuthorityContext` comment as above.
-
-Then pass `ess specify validate --path ess` and regenerate with `task generate`. Neither change is a
-command, so no conformance scenario is added.
+- **Specification change: none in this story.** It relies on the declarations
+  `story:port-skeleton` lands from this story's former § ESS: the union
+  `commission.responsibility.AuthorityVerdict` (`Allow`, `Deny { reason: String }`,
+  `ApprovalRequired { request: String }`) and the reworded `AuthorityContext` comment. Neither is a
+  command, so there is no conformance scenario to add.
+- **First commit, red.** The test `authority_port_contract` alone, in
+  `crates/commission-testkit/tests/authority_port.rs`. It is red because `ports::authority` declares
+  no `AuthorityProvider` trait and `fake_authority` holds no fake: the test does not compile.
+- **Then.** The trait, Commission's authority check and the static fake, which make it pass.
 
 **Who owns a stored decision is decided.** A stored `AuthorityDecision` belongs to exactly one
 action request at one case revision, and a later action needs a new decision (operator decision of
 2026-10-04, `decision-blocker:authority-decision-owner`, cleared; recorded at
-`ess/domains/responsibility.yaml:254-257`). The relation that says so, `AuthorityDecision.action_request_id`
-referencing exactly one `ActionRequest`, is declared by `story:stale-revision-action-request`,
-later in the chain, because that story declares `ActionRequest`. This story does not edit the
-`AuthorityDecision` entity (`:258-270`). It returns the decision at the call and stores none.
+`ess/domains/responsibility.yaml:298-301`). The relation that says so,
+`AuthorityDecision.action_request_id` referencing exactly one `ActionRequest`, is declared by
+`story:stale-revision-action-request`, because that story declares `ActionRequest`. This story does
+not edit the `AuthorityDecision` entity. It returns the verdict at the call and stores none.
 
 ## Domain relations
 
 - **Commission -> principal and authority context.** These are fields of Commission-local types,
-  not relations (`ess/domains/responsibility.yaml:139-142`; `PrincipalId` `:54-57`,
-  `AuthorityContext` `:59-63`; operator decision of 2026-10-04,
+  not relations (`ess/domains/responsibility.yaml:177-180`; `PrincipalId` `:55-58`,
+  `AuthorityContext` `:60-64`; operator decision of 2026-10-04,
   `decision-blocker:commission-principal-type`, cleared). The provider decides for the commission's
   principal under its authority context.
-- **Binding to Mandate.** This is phase-7 work (`:128-129`). Mandate is not a dependency here.
+- **Binding to Mandate.** This is phase-7 work (`:166-167`). Mandate is not a dependency here.
 
 ## Scope
 
-- `crates/commission/src/ports/authority.rs` (new)
-- `crates/commission/src/ports/mod.rs`
-- `crates/commission/src/lib.rs`
-- `crates/commission-testkit/src/fake_authority.rs` (new)
-- `crates/commission-testkit/src/lib.rs`
+- `crates/commission/src/ports/authority.rs` (created empty by `story:port-skeleton`; filled here)
+- `crates/commission-testkit/src/fake_authority.rs` (created empty by `story:port-skeleton`; filled
+  here)
 - `crates/commission-testkit/tests/authority_port.rs` (new)
-- `ess/domains/responsibility.yaml`, `generated/rust/commission/` (chain surface)
 
 ## Acceptance
 
@@ -127,10 +121,11 @@ runs Commission's authority check against the static fake provider and checks th
 
 - **Canon:** no change, and no Canon type is used. The capability comes from the frontier: the
   `capability` of a `FrontierAction` whose `status` is `ApprovalRequired` (`story:ess-hard-gate`),
-  which the admission check of `story:frontier-admission` reports as needs-authority.
+  which the admission check of `story:frontier-admission` reports as needs-authority. This story's
+  test passes capabilities as strings and does not need that check.
 - **Mandate:** Mandate is the intended managed implementation. It is not a dependency here.
 
 ## Source
 
 TASKBOARD M-005 (build pack `TASKBOARD.md` § Commission); Atlas `docs/design/governed-autonomy/invariants.md`
-§§ 3, 7; `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` § 22.
+§§ 3, 7; Atlas ADR 0080; `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` § 22.

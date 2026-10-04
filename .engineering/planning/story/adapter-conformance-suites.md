@@ -13,22 +13,19 @@ relations:
 - depends_on: story:authority-provider-port
 - depends_on: story:observation-evidence-ports
 - depends_on: story:stale-revision-action-request
-- depends_on: story:commission-ess-conformance
 - serves: vision:O1
 - serves: vision:O2
 - serves: vision:governed-autonomy
+- depends_on: story:port-skeleton
+- depends_on: story:governor-port
 scope:
 - confidence: cited
   path: crates/commission-testkit/src/kits/authority.rs
 - confidence: cited
   path: crates/commission-testkit/src/kits/governor.rs
-- confidence: cited
-  path: crates/commission-testkit/src/kits/mod.rs
-- confidence: cited
-  path: crates/commission-testkit/src/lib.rs
 - confidence: inferred
   path: crates/commission-testkit/tests/kits.rs
-revision: 7
+revision: 9
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":3}}}
 ---
@@ -36,9 +33,10 @@ transitions:
 
 Conformance suites that an adapter crate outside Commission runs against its own implementation of
 a port. Each suite is a public test kit: the adapter supplies a factory for its implementation and
-the kit runs every check, naming the check that fails. The kits live in the testkit crate created
-by `story:governor-port`, under `crates/commission-testkit/src/kits/` (`mod.rs`, `governor.rs`,
-`authority.rs`), so an adapter takes them as a dev-dependency on `b10x-commission-testkit`. Two
+the kit runs every check, naming the check that fails. The kits live in the testkit crate under
+`crates/commission-testkit/src/kits/`; `story:port-skeleton` creates `kits/mod.rs`, `governor.rs`
+and `authority.rs` empty with their `mod` lines, and this story fills `governor.rs` and
+`authority.rs`. An adapter takes them as a dev-dependency on `b10x-commission-testkit`. Two
 suites:
 
 - **Governor** (`kits/governor.rs`). It returns the frontier for the case's current revision. It
@@ -70,14 +68,27 @@ Not in this story:
 
 ## Shared surface
 
-Link 12, the last, of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/` (order in `story:ess-hard-gate` § Shared surface):
-depends on `story:commission-ess-conformance`. This story adds no noun and is expected not to change
-either; `crates/commission-testkit/src/lib.rs` is edited along the same chain.
+The wave plan is in `story:port-skeleton` § Shared surface, which supersedes the chain in
+`story:ess-hard-gate` § Shared surface. This story depends on these, each a real dependency:
 
-## ESS
+- `story:port-skeleton`, for the empty kit files and their `mod` lines;
+- `story:governor-port` and `story:authority-provider-port`, whose fakes the kits must pass;
+- `story:observation-evidence-ports`, whose observation and evidence ports the governor kit checks;
+- `story:stale-revision-action-request`, whose revalidation the superseded-revision check drives.
 
-No new noun. Suites exercise the ports through generated types only.
+Its old edge on `story:commission-ess-conformance` was ordering only and is gone; it runs beside
+that story and `story:local-runtime-loop`. It no longer edits `crates/commission-testkit/src/lib.rs`
+or `kits/mod.rs`.
+
+## ESS first
+
+- **Specification change: none in this story.** No new noun and no command. The kits exercise the
+  ports through types `story:port-skeleton` declares (`GovernorError`, `CompletionDetermination`,
+  `AuthorityVerdict`, `Observation`, `Evidence`).
+- **First commit, red.** The test `kits_hold_fakes_and_catch_broken_ones` alone, in
+  `crates/commission-testkit/tests/kits.rs`. It is red because `kits::governor` and
+  `kits::authority` hold no suite: the test does not compile.
+- **Then.** The two suites, which make it pass.
 
 ## Domain relations
 
@@ -85,10 +96,10 @@ None beyond those its dependencies cite.
 
 ## Scope
 
-- `crates/commission-testkit/src/kits/mod.rs` (new)
-- `crates/commission-testkit/src/kits/governor.rs` (new)
-- `crates/commission-testkit/src/kits/authority.rs` (new)
-- `crates/commission-testkit/src/lib.rs`
+- `crates/commission-testkit/src/kits/governor.rs` (created empty by `story:port-skeleton`; filled
+  here)
+- `crates/commission-testkit/src/kits/authority.rs` (created empty by `story:port-skeleton`; filled
+  here)
 - `crates/commission-testkit/tests/kits.rs` (new)
 
 ## Acceptance
@@ -111,4 +122,4 @@ crate other than `b10x-commission`, passes with these expectations:
 ## Source
 
 TASKBOARD M-010 (build pack `TASKBOARD.md` § Commission); `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md`
-§ 52; `epic:governor-adapter` Acceptance.
+§ 52; `epic:governor-adapter` Acceptance; Atlas ADR 0080.

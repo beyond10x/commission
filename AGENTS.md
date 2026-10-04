@@ -51,6 +51,11 @@ The specification is a hard gate in `task check` (Atlas ADR 0076). The task `ess
 No story is implemented while the gate is red, whether or not it edits `ess/`; a story that edits
 `ess/` passes `ess-gate` on its own tree.
 
+Spec first, then red, then implement (Atlas ADR 0080). A unit's first commit changes only `ess/`;
+on it a named test fails (usually `drift`, or a conformance scenario) and the red run is recorded;
+later commits make it pass without changing `ess/`. Each story's `## ESS first` names the change
+and the red test. Only a change with no behaviour change is exempt, and its story says so.
+
 A question the sources do not settle stays out of `ess/` and goes to the planning store as a
 `decision-blocker`, never into `ess/` as a marker. Step 4 stands in until ESS can see open
 questions: the `UNMAPPED:` scan is removed when the ESS release that refuses open entries

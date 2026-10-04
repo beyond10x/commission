@@ -15,25 +15,21 @@ relations:
 - serves: vision:O1
 - serves: vision:O2
 - serves: vision:governed-autonomy
+- depends_on: story:observation-evidence-ports
 scope:
 - confidence: inferred
   path: crates/commission-testkit/tests/runtime_loop.rs
 - confidence: cited
-  path: crates/commission/src/lib.rs
-- confidence: cited
   path: crates/commission/src/runtime.rs
-- confidence: inferred
-  path: ess/domains/responsibility.yaml
-- confidence: inferred
-  path: generated/rust/commission/
-revision: 9
+revision: 11
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 7, decided_on: {"recorded":{"review_outcome":2}}}
 ---
 ## Outcome
 
-This story adds the local runtime loop, `run_until_blocked`, which runs over fakes. It lives in a
-new module, `crates/commission/src/runtime.rs`.
+This story adds the local runtime loop, `run_until_blocked`, which runs over fakes. It lives in the
+module `crates/commission/src/runtime.rs`, which `story:port-skeleton` creates empty with its `mod`
+line.
 
 A commission works through these steps:
 
@@ -57,34 +53,45 @@ where the test can read it, then reads the frontier again.
 
 ## Shared surface
 
-This story is link 10 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/`. It depends on `story:run-outcomes` and on
-`story:stale-revision-action-request`, and `story:commission-ess-conformance` depends on it. The
-whole order is in `story:ess-hard-gate` § Shared surface.
+The wave plan is in `story:port-skeleton` § Shared surface, which supersedes the chain in
+`story:ess-hard-gate` § Shared surface. This story depends on these, each a real dependency:
 
-## ESS
+- `story:run-outcomes`, for the derived outcome and the suspend behaviour;
+- `story:stale-revision-action-request`, for the action request and its revalidation;
+- `story:observation-evidence-ports`, for the observation port of Acceptance 10 (before the
+  re-plan this was reached only through the chain).
 
-This story adds no new noun. If it changes the `Run` entity (`ess/domains/responsibility.yaml:165-180`
-after `story:run-outcomes`), it makes the change there first, passes `ess specify validate --path ess`,
-and regenerates with `task generate`. `story:commission-ess-conformance` comes next in the chain and
-answers any scenario this story adds.
+The governor, executor and authority fakes come through those three. This story no longer touches
+`ess/`, `generated/` or `crates/commission/src/lib.rs`, so it runs beside
+`story:commission-ess-conformance` and `story:adapter-conformance-suites`; the old edge from
+`story:commission-ess-conformance` onto this story was ordering only and is gone.
+
+## ESS first
+
+- **Specification change: none in this story.** It adds no noun. The `Run` states and commands it
+  drives (`Running`, `Suspended`, suspend, resume) are declared by `story:port-skeleton`, and
+  `ActionRequest` by `story:stale-revision-action-request`. A specification change this story finds
+  necessary is filed as a `decision-blocker` and taken by its own story with its own
+  `## ESS first`, so this story stays off `ess/`.
+- **First commit, red.** The test `run_until_blocked_over_fakes` alone, in
+  `crates/commission-testkit/tests/runtime_loop.rs`. It is red because `runtime` declares no
+  `run_until_blocked`: the test does not compile.
+- **Then.** The loop, which makes it pass.
 
 ## Domain relations
 
-- Commission -> Run, one-to-many, the commission owns its runs: `ess/domains/responsibility.yaml:155-159`,
+- Commission -> Run, one-to-many, the commission owns its runs: `ess/domains/responsibility.yaml:192-197`,
   `commission.responsibility.Commission` relation `runs`.
-- Commission -> Case, many-to-one, references: `:149-153`, relation `case`. A case may hold many
-  commissions at once (`:126-127`). The loop runs one commission and does not assume it is the
+- Commission -> Case, many-to-one, references: `:187-191`, relation `case`. A case may hold many
+  commissions at once (`:164-165`). The loop runs one commission and does not assume it is the
   case's only commission.
-- Frontier -> Case, many-to-one, references, carrying `case_revision`: `:195-199`,
+- Frontier -> Case, many-to-one, references, carrying `case_revision`: `:239-243`,
   `commission.responsibility.Frontier` relation `case`.
 
 ## Scope
 
-- `crates/commission/src/runtime.rs` (new)
-- `crates/commission/src/lib.rs`
+- `crates/commission/src/runtime.rs` (created empty by `story:port-skeleton`; filled here)
 - `crates/commission-testkit/tests/runtime_loop.rs` (new)
-- `ess/domains/responsibility.yaml`, `generated/rust/commission/` (chain surface; only if `Run` changes)
 
 ## Acceptance
 
@@ -124,4 +131,4 @@ static fake authority provider, and checks these expectations:
 ## Source
 
 TASKBOARD M-009 (build pack `TASKBOARD.md` § Commission); Atlas `docs/design/governed-autonomy/projects/commission-TASKS.md`;
-`docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` §§ 13-14.
+`docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` §§ 13-14; Atlas ADR 0080.

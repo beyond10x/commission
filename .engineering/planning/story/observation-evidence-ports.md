@@ -11,33 +11,27 @@ refs:
 relations:
 - decomposes: epic:commission-core
 - depends_on: story:governor-port
-- depends_on: story:authority-provider-port
 - serves: vision:O1
 - serves: vision:O2
 - serves: vision:governed-autonomy
+- depends_on: story:port-skeleton
+- depends_on: story:agent-executor-port
 scope:
 - confidence: cited
   path: crates/commission-testkit/src/fake_governor.rs
 - confidence: inferred
   path: crates/commission-testkit/tests/observation_evidence.rs
 - confidence: cited
-  path: crates/commission/src/lib.rs
-- confidence: cited
   path: crates/commission/src/ports/evidence.rs
-- confidence: cited
-  path: crates/commission/src/ports/mod.rs
-- confidence: cited
-  path: ess/domains/responsibility.yaml
-- confidence: cited
-  path: generated/rust/commission/
-revision: 9
+revision: 11
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
 ---
 ## Outcome
 
 Observations and evidence reach the governor through two separate ports. Both live in their own
-module, `crates/commission/src/ports/evidence.rs`:
+module, `crates/commission/src/ports/evidence.rs`, which `story:port-skeleton` creates empty with
+its `mod` line:
 
 - the **observation port** records an observation, which is a raw report: source, subject, time and
   payload;
@@ -45,16 +39,16 @@ module, `crates/commission/src/ports/evidence.rs`:
   producer, facts, provenance, and the observations it interprets.
 
 Observation and evidence are distinct generated types. Nothing in Commission converts an
-observation, an executor output or a trace into evidence (Atlas ADR 0074; `AGENTS.md:31-32`;
+observation, an executor output or a trace into evidence (Atlas ADR 0074; `AGENTS.md` § Rules;
 `docs/contracts/evidence.md:34-46`).
 
 **Producer.** The producer of submitted evidence is supplied by the trusted caller beside the
-payload. It is never read out of the payload or out of model output (`AGENTS.md:25-27`).
+payload. It is never read out of the payload or out of model output (`AGENTS.md` § Rules).
 
 **Observations behind an evidence record.** An evidence record references one or more
 observations through `observation_ids`. This is the operator's decision of 2026-10-04,
 `decision-blocker:evidence-observation-link`, now cleared. It is declared at
-`ess/domains/responsibility.yaml:234-235` and `:242-248`. The evidence port refuses a record that
+`ess/domains/responsibility.yaml:278-279` and `:286-292`. The evidence port refuses a record that
 names no observation, with a typed error.
 
 **Evidence adapter.** With that cardinality decided, the evidence-adapter port is no longer blocked.
@@ -68,46 +62,49 @@ Commission's runtime never calls one on executor output.
 
 **Delivery from the loop.** This story builds the observation port and takes an executor output at
 it; it does not build the path that carries executor output there. The loop's delivery of executor
-output to the observation port is wired by `story:local-runtime-loop`, later in the chain.
+output to the observation port is wired by `story:local-runtime-loop`.
 
 ## Shared surface
 
-This story is link 7 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/`. It depends on `story:authority-provider-port`, and
-`story:stale-revision-action-request` depends on it. The whole order is in
-`story:ess-hard-gate` § Shared surface.
+The wave plan is in `story:port-skeleton` § Shared surface, which supersedes the chain in
+`story:ess-hard-gate` § Shared surface. This story depends on:
 
-The same chain orders these edits:
+- `story:port-skeleton`, for its module file and the `Observation` and `Evidence` fields;
+- `story:governor-port`, a real dependency: this story extends that story's fake governor in
+  `crates/commission-testkit/src/fake_governor.rs`, so it needs the fake's type and edits its file;
+- `story:agent-executor-port`, a real dependency: the acceptance runs with that story's scripted
+  fake executor.
 
-- `crates/commission/src/lib.rs`
-- `ports/mod.rs`
-- `crates/commission-testkit/src/fake_governor.rs`
+Its old edge on `story:authority-provider-port` was ordering only and is gone. It runs beside
+`story:stale-revision-action-request` and `story:run-outcomes`, which do not touch
+`fake_governor.rs`. `story:local-runtime-loop` and `story:adapter-conformance-suites` depend on it.
 
-## ESS
+## ESS first
 
-Change `commission.responsibility.Observation` (`ess/domains/responsibility.yaml:205-218`) and
-`commission.responsibility.Evidence` (`:220-252`) first. Add the fields
-`docs/contracts/evidence.md:7-32` names that are missing: an observation's time and payload, and
-evidence's facts and provenance. Then pass `ess specify validate --path ess` and regenerate with
-`task generate`. Keep the `observations` relation exactly as declared. Add no relation from
-Observation to anything. None of these changes is a command, so the conformance suite gains no
-scenario.
+- **Specification change: none in this story.** It relies on the declarations
+  `story:port-skeleton` lands from this story's former § ESS (`docs/contracts/evidence.md:7-32`):
+  `Observation` gains `observed_at: Timestamp` and `payload: Json`; `Evidence` gains `facts: Json`
+  and `provenance: Json`; the `observations` relation is unchanged and no relation from
+  `Observation` is added. None is a command, so there is no conformance scenario to add.
+- **First commit, red.** The test `observation_and_evidence_stay_apart` alone, in
+  `crates/commission-testkit/tests/observation_evidence.rs`. It is red because `ports::evidence`
+  declares no observation port, evidence port or `EvidenceAdapter`, and the fake governor
+  implements neither port: the test does not compile.
+- **Then.** The two ports, the adapter trait, the typed refusal and the fake governor's two
+  implementations, which make it pass.
 
 ## Domain relations
 
 - Evidence -> Case, many-to-one, references, carrying `subject_revision`:
-  `ess/domains/responsibility.yaml:237-241`, `commission.responsibility.Evidence` relation `case`.
+  `ess/domains/responsibility.yaml:281-285`, `commission.responsibility.Evidence` relation `case`.
 - Evidence -> Observation, one evidence record to one or more observations, references, via
-  `observation_ids`: `:242-248`, relation `observations`.
+  `observation_ids`: `:286-292`, relation `observations`.
 
 ## Scope
 
-- `crates/commission/src/ports/evidence.rs` (new)
-- `crates/commission/src/ports/mod.rs`
-- `crates/commission/src/lib.rs`
-- `crates/commission-testkit/src/fake_governor.rs`
+- `crates/commission/src/ports/evidence.rs` (created empty by `story:port-skeleton`; filled here)
+- `crates/commission-testkit/src/fake_governor.rs` (from `story:governor-port`; extended here)
 - `crates/commission-testkit/tests/observation_evidence.rs` (new)
-- `ess/domains/responsibility.yaml`, `generated/rust/commission/` (chain surface)
 
 ## Acceptance
 
@@ -132,4 +129,4 @@ executor. It checks these expectations:
 ## Source
 
 TASKBOARD M-006 (build pack `TASKBOARD.md` § Commission); `docs/contracts/evidence.md`; Atlas
-ADR 0074; `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` § 26.
+ADRs 0074, 0080; `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` § 26.

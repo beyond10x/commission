@@ -11,99 +11,115 @@ refs:
 relations:
 - decomposes: epic:commission-core
 - depends_on: story:governor-port
-- depends_on: story:observation-evidence-ports
-- depends_on: story:agent-executor-port
 - serves: vision:O1
 - serves: vision:O2
 - serves: vision:governed-autonomy
+- depends_on: story:port-skeleton
+- depends_on: story:frontier-admission
 scope:
 - confidence: inferred
   path: crates/commission-testkit/tests/action_request.rs
-- confidence: inferred
-  path: crates/commission/src/action_request.rs
 - confidence: cited
-  path: crates/commission/src/lib.rs
+  path: crates/commission/src/action_request.rs
 - confidence: cited
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 9
+revision: 12
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
 ---
 ## Outcome
 
 A proposed action becomes an action request bound to the case revision of the frontier it was
-chosen from. The request lives in a new module, `crates/commission/src/action_request.rs`, and
-carries:
+chosen from. The request lives in the module `crates/commission/src/action_request.rs`, which
+`story:port-skeleton` creates empty with its `mod` line, and carries:
 
-- the commission;
+- the run that proposed it, through which the commission is reached
+  (`decision-blocker:action-request-commission`, cleared: `Run` owns its requests);
 - the case id;
 - the expected case revision;
 - the action;
 - the arguments, as `ProposedActionArguments`.
 
-`ProposedActionArguments` is declared by `story:agent-executor-port` and only consumed here. The
+`ProposedActionArguments` is declared by `story:port-skeleton` and only consumed here. The
 expected revision always comes from the frontier the run was given, never from executor output.
 
 Immediately before anything is done with a request, Commission revalidates it. It reads the current
 case revision from the governor, then re-checks the action against the current frontier with the
 admission check from `story:frontier-admission`. A request whose expected revision is not current
 is refused as stale, and the refusal names both revisions. This holds even when the action would
-be admissible now. A selection made on stale state is not permission (`AGENTS.md:28-30`;
+be admissible now. A selection made on stale state is not permission (`AGENTS.md` § Rules;
 `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` § 36, lines 1490-1512).
 
 The test's moving case comes from the scripted fake governor
-(`crates/commission-testkit/src/fake_governor.rs`), which `story:governor-port` already lets
-advance a case's revision. This story needs no change to the fake.
+(`crates/commission-testkit/src/fake_governor.rs`), which `story:governor-port` lets advance a
+case's revision. This story needs no change to the fake.
 
 ## Shared surface
 
-This story is link 8 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/`. It depends on `story:observation-evidence-ports`, and
-`story:run-outcomes` depends on it. The whole order is in `story:ess-hard-gate`
-§ Shared surface. It also depends directly on `story:agent-executor-port`, which owns
-`ProposedActionArguments`.
+The wave plan is in `story:port-skeleton` § Shared surface, which supersedes the chain in
+`story:ess-hard-gate` § Shared surface. This story depends on:
 
-## ESS
+- `story:port-skeleton`, for its module file and `ProposedActionArguments`;
+- `story:governor-port`, a real dependency: the `Governor` port gives the current revision, and the
+  scripted fake governor moves the case;
+- `story:frontier-admission`, a real dependency: revalidation reuses its admission check.
 
-The action request is a new noun. Declare it in `ess/domains/responsibility.yaml` first:
+Its old edges on `story:observation-evidence-ports` (ordering only) and on
+`story:agent-executor-port` (which owned `ProposedActionArguments` before `story:port-skeleton`
+took the declaration) are gone.
 
-- an entity `commission.responsibility.ActionRequest`, with an identity newtype and the fields
-  above;
-- a command that revalidates a request, with three outcomes: admitted, refused as stale (naming the
-  expected and the current revision), and refused as not admitted by the frontier.
+It still edits `ess/domains/responsibility.yaml` and regenerates `generated/rust/commission/`, and
+it is the only story in its wave that does: `story:observation-evidence-ports` and
+`story:run-outcomes` beside it touch neither. `story:local-runtime-loop`,
+`story:commission-ess-conformance` and `story:adapter-conformance-suites` depend on it.
 
-This is the domain's first command. It is the one that gives
-`ess verify conform synthesize --path ess` scenarios to synthesize; a probe on 2026-10-04 with
-ess 0.52.0 synthesized 0 before it. Pass `ess specify validate --path ess`, then regenerate with
-`task generate`.
+## ESS first
 
-`story:commission-ess-conformance` is later in the chain. It answers these scenarios through its
-Rust target, or names a skipped one in `ess/SKIPPED.md`, which `story:generated-responsibility-model`
-creates.
+Atlas ADR 0080: the first commit changes only the specification, a named test is red on it, and
+later commits make it pass. `ActionRequest` stays with this story rather than with
+`story:port-skeleton` because its command's input, response and outcomes and the request's
+lifecycle states are written nowhere yet; this story settles them.
+
+- **Specification change (first commit, `ess/domains/responsibility.yaml` only).**
+  - an entity `commission.responsibility.ActionRequest`, with an identity newtype and the fields
+    above;
+  - `Run` gains the relation `requests`, kind `owns`, cardinality many, via `run_id` on
+    `ActionRequest` (`decision-blocker:action-request-commission`);
+  - `ActionRequest` gains the relation `case`, kind `references`, cardinality one, via `case_id`;
+  - `AuthorityDecision` gains `action_request_id` and a `references` relation to exactly one
+    `ActionRequest` (§ Authority decision relation);
+  - a command that revalidates a request, with three outcomes: admitted, refused as stale (naming
+    the expected and the current revision), and refused as not admitted by the frontier.
+- **Red on that commit.** `drift_passes_on_the_committed_tree`
+  (`crates/commission-xtask/tests/checks.rs`, and `task drift`) fails: the committed
+  `generated/rust/commission/` no longer matches a fresh synthesis of `ess/`.
+- **Then.** `task generate`, the request and its revalidation, and the test
+  `action_request_revalidation`; `task ess-gate` passes throughout.
+
+The revalidation command joins the Run's suspend and resume commands that `story:port-skeleton`
+declares. `story:commission-ess-conformance` answers its scenarios through its Rust target, or names
+a skipped one in `ess/SKIPPED.md`.
 
 ## Domain relations
 
 - Action request -> Case, many-to-one, references, via `case_id`. `ActionRequest` carries `case_id`
   in the history design § 36 (`docs/history/beyond10x-agent-sdk-design-pre-commission-name.md:1497-1504`).
-  Declare this as a `relations:` entry.
-- Action request -> Commission, many-to-one. This is inferred, not read from any source. § 36 names
-  an `actor` without a type, and the executor proposes within one commission's run
-  (`crates/commission/src/lib.rs:53-55`). Whether a commission owns its requests or merely
-  references them is not settled. Under the ESS hard gate (`story:ess-hard-gate`, ADR 0076) no
-  `UNMAPPED:` marker may be written into `ess/`, and a `commission` field without its relation is a
-  foreign key nobody checks. The question is `decision-blocker:action-request-commission`, which
-  blocks this story; once decided, declare the relation as a `relations:` entry.
+  Declared as a `relations:` entry.
+- Run -> Action request, one-to-many, owns, via `run_id` (coordinator decision of 2026-10-04,
+  `decision-blocker:action-request-commission`, cleared). A request is made inside one run against
+  that run's case revision and never outlives its run. The commission is reached through the run;
+  there is no direct `ActionRequest` -> `Commission` relation.
 - Run -> case revision: `commission.responsibility.Run` field `case_revision`
-  (`ess/domains/responsibility.yaml:174-176`, "a proposal made on another revision is stale").
+  (`ess/domains/responsibility.yaml:212-214`, "a proposal made on another revision is stale").
 
 ## Scope
 
-- `crates/commission/src/action_request.rs` (new)
-- `crates/commission/src/lib.rs`
+- `crates/commission/src/action_request.rs` (created empty by `story:port-skeleton`; filled here)
 - `crates/commission-testkit/tests/action_request.rs` (new)
-- `ess/domains/responsibility.yaml`, `generated/rust/commission/` (chain surface)
+- `ess/domains/responsibility.yaml`, `generated/rust/commission/` (the action request and its
+  command; the only story in its wave that edits them)
 
 ## Acceptance
 
@@ -130,14 +146,14 @@ with these expectations:
 ## Notes
 
 - Canon: no change, and no Canon type is used. The frontier's revision is the generated
-  `Frontier`'s `case_revision` (`ess/domains/responsibility.yaml:192-193`); the action is matched
-  by the `action` string of its `FrontierAction` (`story:ess-hard-gate`).
+  `Frontier`'s `case_revision`; the action is matched by the `action` string of its
+  `FrontierAction` (`story:ess-hard-gate`).
 - Expectations 6 and 7 need `ess` on `PATH`. `task spec` already does.
 
 ## Source
 
 TASKBOARD M-008 (build pack `TASKBOARD.md` § Commission); `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md`
-§ 36; Atlas `docs/design/governed-autonomy/invariants.md` § 4.
+§ 36; Atlas `docs/design/governed-autonomy/invariants.md` § 4; Atlas ADR 0080.
 
 ## Authority decision relation
 
