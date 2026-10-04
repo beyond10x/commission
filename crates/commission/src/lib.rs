@@ -5,21 +5,17 @@
 //! Production interfaces will almost certainly be async and split into
 //! multiple crates. The purpose of this scaffold is to freeze dependency
 //! direction and vocabulary.
+//!
+//! The responsibility model (Agent, AgentRevision, Case, Commission and their ids) is generated
+//! from `ess/` into `generated/rust/commission/` and re-exported here as [`model`]. It is never
+//! written by hand.
 
-use b10x_canon::{ActionId, CaseId, Frontier};
+use b10x_canon::{ActionId, Frontier};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AgentId(pub String);
+/// The responsibility model, synthesized from the ESS specification.
+pub use commission as model;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CommissionId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Commission {
-    pub id: CommissionId,
-    pub agent: AgentId,
-    pub case: CaseId,
-}
+use model::responsibility::CommissionData;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExecutorOutcome {
@@ -47,17 +43,21 @@ pub enum RunOutcome {
 }
 
 pub trait Governor {
-    fn frontier(&self, commission: &Commission) -> Result<Frontier, String>;
+    fn frontier(&self, commission: &CommissionData) -> Result<Frontier, String>;
 }
 
 pub trait AgentExecutor {
-    fn run(&self, commission: &Commission, frontier: &Frontier) -> Result<ExecutorOutcome, String>;
+    fn run(
+        &self,
+        commission: &CommissionData,
+        frontier: &Frontier,
+    ) -> Result<ExecutorOutcome, String>;
 }
 
 pub trait AuthorityProvider {
     fn authorize(
         &self,
-        commission: &Commission,
+        commission: &CommissionData,
         capability: &str,
     ) -> Result<AuthorityDecision, String>;
 }
