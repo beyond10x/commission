@@ -15,9 +15,27 @@ tasks:
       - task: drift
       - task: no-hand-model
       - task: deps-guard
+      - task: docs-drift
       - cargo fmt --check
       - cargo clippy --workspace --all-targets --locked -- -D warnings
       - cargo test --workspace --locked
+
+  docs:
+    desc: Regenerate website/docs/reference/ from the ESS specification.
+    cmds:
+      - cargo run -q --locked -p commission-docs -- generate
+
+  docs-drift:
+    desc: Fail when website/docs/reference/ differs from a fresh generation, or holds a page nothing generates.
+    cmds:
+      - cargo run -q --locked -p commission-docs -- generate --check
+
+  site-build:
+    desc: Build the Docusaurus documentation site (the only Node in the repository).
+    dir: website
+    cmds:
+      - npm ci
+      - npm run build
 
   spec:
     desc: Validate the ESS specification.
