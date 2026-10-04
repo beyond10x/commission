@@ -2,14 +2,21 @@
   "provenance": {
     "system": "commission",
     "specification_version": "v1",
-    "source_digest": "898d22fda725ef3fea9a7b81d94df4d616fd108c450a9aad56f1a46c481d9abc",
-    "contract_digest": "33d7ce46ba7be6f8dfb0f46fcd959c228544c4751ece242a7debb2315d26b407"
+    "source_digest": "e22bafbba59d9a46631f18ffd115d5bc1f12345579d5d73f29789c38070c80b9",
+    "contract_digest": "f90ce951fa32dc8d791f2f62cae13439279d33683435293d01c4408cb1bc0034"
   },
   "scope": {
     "profile": "component-skeletons",
     "layout": "crate"
   },
   "capabilities": [
+    {
+      "kind": "domain_type",
+      "source": "commission.responsibility.ActionStatus",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
     {
       "kind": "domain_type",
       "source": "commission.responsibility.Agent.State",
@@ -117,7 +124,28 @@
     },
     {
       "kind": "domain_type",
+      "source": "commission.responsibility.FrontierAction",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "domain_type",
+      "source": "commission.responsibility.FrontierClaim",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "domain_type",
       "source": "commission.responsibility.FrontierId",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "domain_type",
+      "source": "commission.responsibility.FrontierObligation",
       "disposition": {
         "disposition": "generated"
       }

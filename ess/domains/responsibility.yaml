@@ -1,7 +1,8 @@
 # Draft domain for Commission (story M-001). Nouns and relations are read from
 # docs/design/commission-design.md, docs/contracts/{commission-executor,frontier,evidence}.md and
-# Atlas ADR 0070. Every relation the sources do not settle is marked UNMAPPED: and stays out of the
-# model until a story decides it. One lifecycle state per entity until a command outcome moves it.
+# Atlas ADR 0070. A relation the sources do not settle stays out of the model until a story decides
+# it; its open question is a decision-blocker in the planning store, not a note here (Atlas ADR
+# 0076). One lifecycle state per entity until a command outcome moves it.
 domain: commission.responsibility
 
 summary: >-
@@ -71,6 +72,43 @@ types:
   - name: commission.responsibility.Truth
     kind: enum
     variants: ["True", "False", "Unknown"]
+
+  # docs/contracts/frontier.md: what the frontier says about one action.
+  - name: commission.responsibility.ActionStatus
+    kind: enum
+    variants: [Admissible, ApprovalRequired, Blocked]
+
+  # docs/contracts/frontier.md: one claim of a frontier and its three-valued value.
+  - name: commission.responsibility.FrontierClaim
+    kind: struct
+    fields:
+      - name: claim
+        type: String
+      - name: value
+        type: commission.responsibility.Truth
+
+  # docs/contracts/frontier.md: one obligation of a frontier, open or discharged.
+  - name: commission.responsibility.FrontierObligation
+    kind: struct
+    fields:
+      - name: obligation
+        type: String
+      - name: open
+        type: Boolean
+
+  # docs/contracts/frontier.md: one action of a frontier, the capability an approval needs and the
+  # reasons a block names.
+  - name: commission.responsibility.FrontierAction
+    kind: struct
+    fields:
+      - name: action
+        type: String
+      - name: status
+        type: commission.responsibility.ActionStatus
+      - name: capability
+        type: Optional<String>
+      - name: reasons
+        type: List<String>
 
 entities:
   # Reusable worker configuration.
@@ -180,8 +218,8 @@ entities:
       terminal: [Running]
 
   # docs/contracts/frontier.md: the bridge between governance and execution, for one case revision.
-  # UNMAPPED: claims, obligations and actions inside a frontier are Canon values; whether they are
-  # entities here or a value type imported from Canon is decided in story M-002.
+  # Its claims, obligations and actions are Commission's own value types (story M-002): none has an
+  # identity or a lifecycle of its own outside the frontier issued for one case revision.
   - name: commission.responsibility.Frontier
     identity:
       name: frontier_id
@@ -191,6 +229,12 @@ entities:
         type: commission.responsibility.CaseId
       - name: case_revision
         type: Integer
+      - name: claims
+        type: List<commission.responsibility.FrontierClaim>
+      - name: obligations
+        type: List<commission.responsibility.FrontierObligation>
+      - name: actions
+        type: List<commission.responsibility.FrontierAction>
     relations:
       - name: case
         kind: references

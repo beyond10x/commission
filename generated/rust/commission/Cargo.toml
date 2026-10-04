@@ -1,6 +1,6 @@
 # generated from commission v1
-# model digest 898d22fda725ef3fea9a7b81d94df4d616fd108c450a9aad56f1a46c481d9abc
-# contract digest 33d7ce46ba7be6f8dfb0f46fcd959c228544c4751ece242a7debb2315d26b407
+# model digest e22bafbba59d9a46631f18ffd115d5bc1f12345579d5d73f29789c38070c80b9
+# contract digest f90ce951fa32dc8d791f2f62cae13439279d33683435293d01c4408cb1bc0034
 # do not edit: regenerate with `ess synthesize --layout crate`
 
 [package]

@@ -1,6 +1,6 @@
 // generated from commission v1
-// model digest 898d22fda725ef3fea9a7b81d94df4d616fd108c450a9aad56f1a46c481d9abc
-// contract digest 33d7ce46ba7be6f8dfb0f46fcd959c228544c4751ece242a7debb2315d26b407
+// model digest e22bafbba59d9a46631f18ffd115d5bc1f12345579d5d73f29789c38070c80b9
+// contract digest f90ce951fa32dc8d791f2f62cae13439279d33683435293d01c4408cb1bc0034
 // do not edit: regenerate with `ess synthesize --layout crate`
 
 //! Responsibility — `commission.responsibility`.
@@ -8,6 +8,17 @@
 //! An agent revision commissioned to a durable case. The governor owns the case's truth and returns a frontier; a run is one bounded period of execution against it. The executor proposes; it never completes a case.
 //!
 //! Everything this bounded context declares that the synthesis plan marks generated.
+
+/// ActionStatus — `commission.responsibility.ActionStatus`: one of a closed set of names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActionStatus {
+    /// `Admissible`.
+    Admissible,
+    /// `ApprovalRequired`.
+    ApprovalRequired,
+    /// `Blocked`.
+    Blocked,
+}
 
 /// The states of `commission.responsibility.Agent`, as runtime values.
 ///
@@ -122,9 +133,40 @@ pub enum FrontierState {
     Issued,
 }
 
+/// FrontierAction — `commission.responsibility.FrontierAction`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FrontierAction {
+    /// `action` — `String`.
+    pub action: String,
+    /// `status` — `commission.responsibility.ActionStatus`.
+    pub status: ActionStatus,
+    /// `capability` — `Optional<String>`.
+    pub capability: Option<String>,
+    /// `reasons` — `List<String>`.
+    pub reasons: Vec<String>,
+}
+
+/// FrontierClaim — `commission.responsibility.FrontierClaim`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FrontierClaim {
+    /// `claim` — `String`.
+    pub claim: String,
+    /// `value` — `commission.responsibility.Truth`.
+    pub value: Truth,
+}
+
 /// FrontierId — `commission.responsibility.FrontierId`: a distinct wrapper around `Uuid`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FrontierId(pub crate::primitives::Uuid);
+
+/// FrontierObligation — `commission.responsibility.FrontierObligation`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FrontierObligation {
+    /// `obligation` — `String`.
+    pub obligation: String,
+    /// `open` — `Boolean`.
+    pub open: bool,
+}
 
 /// The states of `commission.responsibility.Observation`, as runtime values.
 ///
@@ -981,6 +1023,12 @@ pub struct FrontierData {
     pub case_id: CaseId,
     /// `case_revision` — `Integer`.
     pub case_revision: i64,
+    /// `claims` — `List<commission.responsibility.FrontierClaim>`.
+    pub claims: Vec<FrontierClaim>,
+    /// `obligations` — `List<commission.responsibility.FrontierObligation>`.
+    pub obligations: Vec<FrontierObligation>,
+    /// `actions` — `List<commission.responsibility.FrontierAction>`.
+    pub actions: Vec<FrontierAction>,
 }
 
 /// The states of `commission.responsibility.Frontier`, at the type level.
