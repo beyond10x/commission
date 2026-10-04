@@ -27,10 +27,14 @@
 //! executed. Commission has no effect port yet (commission `story:effect-invocation`).
 //!
 //! The loop is bounded where the frontier does not change (wave 2026-10-04-w5, run-outcomes F4):
-//! an iteration that admits no request, made at the same loaded case revision as an iteration
-//! just before it that admitted none either, ends the run with no admissible action. A new case
-//! revision or an admitted request starts the count again. It covers `NoUsefulAction`,
-//! `CompletedLocalReasoning` and a refused proposal alike.
+//! two iterations in a row that admit no request end the run with no admissible action, and an
+//! admitted request starts the count again, unless the same action and arguments were already
+//! admitted in this Run, which counts as admitting nothing. A stale revalidation does not count;
+//! the next iteration's load ends the run (adversary pass 2, F-A and F-B). It covers
+//! `NoUsefulAction`, `CompletedLocalReasoning` and a refused proposal alike. A Run is bound to the case revision it started against
+//! (`ess/domains/responsibility.yaml:390`): when the case moves to another revision, the loop
+//! admits nothing more and ends with no admissible action, unless the governor holds the case
+//! complete (coordinator decision F1, adversary pass 1).
 //!
 //! The fake governor takes one scripted answer per call, whichever port method is called, so each
 //! script below counts calls in the order above.
@@ -698,8 +702,12 @@ fn unchanged_frontier_is_bounded(runs: &mut Generated<RunStore>) {
         "{name}: outcome"
     );
 
-    // A new case revision starts the count again: revision 6, then 7 twice.
-    let name = "bound: a new revision starts the count again";
+    // A new case revision ends the run: revision 6, then 7. A Run is bound to the case revision it
+    // started against, and a proposal made on another revision is stale
+    // (ess/domains/responsibility.yaml:390), so the Run's revision has no admissible action left:
+    // the loop admits nothing more and ends with no admissible action (coordinator decision F1,
+    // adversary pass 1).
+    let name = "bound: the loop ends at the revision change";
     let case = CaseId("case-moving".to_owned());
     let commission_c = commission(9, &case);
     let governor = FakeGovernor::new();
@@ -724,7 +732,12 @@ fn unchanged_frontier_is_bounded(runs: &mut Generated<RunStore>) {
         &authority,
         6,
     );
-    assert_eq!(executor.at(), [3, 6, 9], "{name}: executor calls");
+    assert_eq!(
+        governor.calls(),
+        [iteration(&case), completed(&case)].concat(),
+        "{name}: governor calls"
+    );
+    assert_eq!(executor.at(), [3], "{name}: executor calls");
     assert_eq!(
         end.outcome,
         RunOutcome::NoAdmissibleAction(Unit(true)),
