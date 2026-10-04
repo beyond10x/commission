@@ -2,14 +2,16 @@
 format: aep.planning-md/3
 id: decision-blocker:aep-governed-case
 kind: decision-blocker
-status: open
+status: cleared
 title: Nobody has decided which AEP record a Commission case names, or which AEP surface the adapter calls
 refs:
 - provider: taskboard
   reference: M-011
 relations:
 - blocks: epic:governor-adapter
-revision: 1
+revision: 3
+transitions:
+- {from: "open", to: "cleared", at: "2026-10-04T13:22:00Z", actor: "human:timo", revision: 3}
 ---
 ## Question
 
@@ -47,3 +49,10 @@ suspend/resume. Each reads or writes the AEP case, so none was drafted as a stor
   `els/crates/els/src/lib.rs` holds only the protocol id (TASKBOARD E-002).
 - The AEP side of the governor role is owned by `beyond10x/aep` (Atlas `epic:ga-aep-governor`,
   Owners). No AEP planning artifact plans it yet.
+
+## Answer (2026-10-04)
+
+Overtaken: AEP is not the governor. The operator chose a governor of its own (Atlas ADR 0089, "The
+governor is its own component", amending ADRs 0069, 0077 and 0079): beyond10x/governor implements
+Commission's `Governor` and `EvidencePort` over Canon, and a Commission `CaseId` names a case that
+governor opens and holds in its case store. There is no AEP adapter, so no AEP surface to choose.

@@ -2,20 +2,23 @@
 format: aep.planning-md/3
 id: epic:governor-adapter
 kind: epic
-status: proposed
+status: rejected
 title: AEP governor adapter
 summary: Governor adapter for AEP, held to Commission's governor conformance tests (M-011); M-012 recorded as deferred.
 refs:
 - provider: atlas
   reference: epic:ga-aep-governor
+- provider: governor
+  reference: epic:governor
 relations:
 - depends_on: epic:commission-core
 - serves: vision:governed-autonomy
 - serves: vision:O1
 - serves: vision:O2
-revision: 3
+revision: 6
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:55Z", actor: "human:timo", revision: 3}
+- {from: "proposed", to: "rejected", at: "2026-10-04T13:22:00Z", actor: "human:timo", revision: 6}
 ---
 ## Outcome
 
@@ -39,3 +42,11 @@ Evidence submission to AEP and the evidence-adapter conformance kit (history des
 deferred out of `story:adapter-conformance-suites` on 2026-10-04 because the only evidence adapter
 before phase 6 is the fake. Stories for them are drafted when this epic is decomposed again after
 `decision-blocker:aep-governed-case` is answered.
+
+## Moved (2026-10-04)
+
+This epic moves to beyond10x/governor `epic:governor` (Atlas ADR 0089): the governor is its own
+component, out of AEP and out of Commission, implementing this repository's `Governor` and
+`EvidencePort` over Canon. Its first story there is `story:canon-governor`, held to
+`story:adapter-conformance-suites`' governor suite. The evidence-submission and evidence-adapter
+conformance work named above moves with it.
