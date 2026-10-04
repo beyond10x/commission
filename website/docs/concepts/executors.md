@@ -1,12 +1,11 @@
 ---
 title: Executors and Loom
 description: One executor contract, many executors. Loom is the native one.
+status: shipped
+lede: Commission does not depend on any particular executor. The AgentExecutor contract is meant to fit very different workers.
+source: The AgentExecutor port, crates/commission/src/ports/executor.rs
+source_url: https://github.com/beyond10x/commission/blob/main/crates/commission/src/ports/executor.rs
 ---
-
-# Executors and Loom
-
-Commission does not depend on any particular executor. The `AgentExecutor` contract is meant to fit
-very different workers.
 
 | Executor | Role |
 |---|---|

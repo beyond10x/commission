@@ -1,9 +1,10 @@
 ---
 title: Observation and evidence (sketch)
 description: The design sketch separating raw observations from admitted evidence.
+lede: An observation is a raw report. Evidence is what the protocol or governor admits. Nothing turns one into the other by itself.
+source: docs/contracts/evidence.md, a design sketch
+source_url: https://github.com/beyond10x/commission/blob/main/docs/contracts/evidence.md
 ---
-
-# Observation and evidence
 
 :::note[Design sketch]
 

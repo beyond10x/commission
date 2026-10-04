@@ -1,9 +1,10 @@
 ---
 title: Frontier (sketch)
 description: The design sketch of the frontier, the bridge between governance and execution.
+lede: A frontier is the bridge between governance and execution. It is not just a list of tools.
+source: docs/contracts/frontier.md, a design sketch
+source_url: https://github.com/beyond10x/commission/blob/main/docs/contracts/frontier.md
 ---
-
-# Frontier
 
 :::note[Design sketch]
 
@@ -13,8 +14,7 @@ not a wire format. The typed form that exists today is in the generated
 
 :::
 
-A frontier is the bridge between governance and execution. It is not just a list of tools. It
-carries enough structure to answer six questions about a case at one revision:
+It carries enough structure to answer six questions about a case at one revision:
 
 - what is currently known;
 - what is unknown or contradicted;
