@@ -10,40 +10,43 @@ A generic executor contract should be able to support:
 - human executors;
 - test fakes.
 
-Conceptual Rust:
+The port as built (`crates/commission/src/ports/executor.rs`):
 
 ```rust
 pub trait AgentExecutor {
     fn run(
         &self,
-        commission: &CommissionContext,
-        frontier: &Frontier,
-    ) -> Result<ExecutorOutcome, ExecutorError>;
+        commission: &Commission<commission_state::Assigned>,
+        frontier: &Frontier<frontier_state::Issued>,
+    ) -> ExecutorOutcome;
 }
 ```
 
-Production will likely be async.
+`run` is synchronous and has no error channel: an executor that fails returns
+`Suspended(ExecutorOutcomeSuspended { reason: SuspensionReason::ExternalAvailability(..) })`.
 
-Possible output:
+The outcome it returns, generated from `ess/` into `generated/rust/commission/src/responsibility.rs`:
 
 ```rust
 pub enum ExecutorOutcome {
-    ProposedAction {
-        action: ActionId,
-        arguments_json: String,
-    },
+    ProposedAction(ExecutorOutcomeProposedAction),
+    NeedsHumanJudgment(ExecutorOutcomeNeedsHumanJudgment),
+    Suspended(ExecutorOutcomeSuspended),
+    NoUsefulAction(Unit),
+    CompletedLocalReasoning(Unit),
+}
 
-    NeedsHumanJudgment {
-        request: HumanDecisionRequest,
-    },
+pub struct ExecutorOutcomeProposedAction {
+    pub action: String,
+    pub arguments: ProposedActionArguments,
+}
 
-    Suspended {
-        reason: SuspensionReason,
-    },
+pub struct ExecutorOutcomeNeedsHumanJudgment {
+    pub request: HumanDecisionRequest,
+}
 
-    NoUsefulAction,
-
-    CompletedLocalReasoning,
+pub struct ExecutorOutcomeSuspended {
+    pub reason: SuspensionReason,
 }
 ```
 
