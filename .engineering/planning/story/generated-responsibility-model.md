@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:generated-responsibility-model
 kind: story
-status: proposed
+status: implemented
 title: Agent, AgentRevision, CaseRef and Commission come from the generated ESS model
 summary: Model committed under generated/rust/commission/ from ess generate synthesize, re-exported by b10x-commission, held by task drift and task no-hand-model.
 refs:
@@ -34,9 +34,11 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 9
+revision: 11
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 9, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "proposed", to: "active", at: "2026-10-04T00:23:52Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "active", to: "implemented", at: "2026-10-04T00:59:23Z", actor: "human:timo", revision: 11, decided_on: {"recorded":{"test_result":1,"review_outcome":18,"verification":1}}}
 ---
 ## Outcome
 
