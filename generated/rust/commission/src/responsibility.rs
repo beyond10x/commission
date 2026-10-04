@@ -1,6 +1,6 @@
 // generated from commission v1
-// model digest e22bafbba59d9a46631f18ffd115d5bc1f12345579d5d73f29789c38070c80b9
-// contract digest f90ce951fa32dc8d791f2f62cae13439279d33683435293d01c4408cb1bc0034
+// model digest 77dc61714ccce20ef2f833a1f99ef2989ba12c67fc6c27616df1e8a70905bdb1
+// contract digest a663fd457c98f8fa31002ad114ea722984ce21a6df29ad17989bf7e75edb591a
 // do not edit: regenerate with `ess synthesize --layout crate`
 
 //! Responsibility — `commission.responsibility`.
@@ -66,6 +66,31 @@ pub enum AuthorityDecisionState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthorityDecisionId(pub crate::primitives::Uuid);
 
+/// AuthorityVerdict — `commission.responsibility.AuthorityVerdict`: one of a fixed set of shapes, tagged on the wire by `kind`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuthorityVerdict {
+    /// Tagged `Allow` — `commission.responsibility.Unit`.
+    Allow(Unit),
+    /// Tagged `ApprovalRequired` — `commission.responsibility.AuthorityVerdictApprovalRequired`.
+    ApprovalRequired(AuthorityVerdictApprovalRequired),
+    /// Tagged `Deny` — `commission.responsibility.AuthorityVerdictDeny`.
+    Deny(AuthorityVerdictDeny),
+}
+
+/// AuthorityVerdictApprovalRequired — `commission.responsibility.AuthorityVerdictApprovalRequired`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthorityVerdictApprovalRequired {
+    /// `request` — `String`.
+    pub request: String,
+}
+
+/// AuthorityVerdictDeny — `commission.responsibility.AuthorityVerdictDeny`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthorityVerdictDeny {
+    /// `reason` — `String`.
+    pub reason: String,
+}
+
 /// The states of `commission.responsibility.Case`, as runtime values.
 ///
 /// Synthesised from the lifecycle, so the two cannot disagree. Which *moves* are legal is not
@@ -94,6 +119,22 @@ pub enum CommissionState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommissionId(pub crate::primitives::Uuid);
 
+/// CompletionDetermination — `commission.responsibility.CompletionDetermination`: one of a fixed set of shapes, tagged on the wire by `kind`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CompletionDetermination {
+    /// Tagged `Complete` — `commission.responsibility.CompletionDeterminationComplete`.
+    Complete(CompletionDeterminationComplete),
+    /// Tagged `Open` — `commission.responsibility.Unit`.
+    Open(Unit),
+}
+
+/// CompletionDeterminationComplete — `commission.responsibility.CompletionDeterminationComplete`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompletionDeterminationComplete {
+    /// `outcome` — `String`.
+    pub outcome: String,
+}
+
 /// The states of `commission.responsibility.Evidence`, as runtime values.
 ///
 /// Synthesised from the lifecycle, so the two cannot disagree. Which *moves* are legal is not
@@ -108,19 +149,42 @@ pub enum EvidenceState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EvidenceId(pub crate::primitives::Uuid);
 
-/// ExecutorOutcome — `commission.responsibility.ExecutorOutcome`: one of a closed set of names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// ExecutorOutcome — `commission.responsibility.ExecutorOutcome`: one of a fixed set of shapes, tagged on the wire by `kind`.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExecutorOutcome {
-    /// `ProposedAction`.
-    ProposedAction,
-    /// `NeedsHumanJudgment`.
-    NeedsHumanJudgment,
-    /// `Suspended`.
-    Suspended,
-    /// `NoUsefulAction`.
-    NoUsefulAction,
-    /// `CompletedLocalReasoning`.
-    CompletedLocalReasoning,
+    /// Tagged `CompletedLocalReasoning` — `commission.responsibility.Unit`.
+    CompletedLocalReasoning(Unit),
+    /// Tagged `NeedsHumanJudgment` — `commission.responsibility.ExecutorOutcomeNeedsHumanJudgment`.
+    NeedsHumanJudgment(ExecutorOutcomeNeedsHumanJudgment),
+    /// Tagged `NoUsefulAction` — `commission.responsibility.Unit`.
+    NoUsefulAction(Unit),
+    /// Tagged `ProposedAction` — `commission.responsibility.ExecutorOutcomeProposedAction`.
+    ProposedAction(ExecutorOutcomeProposedAction),
+    /// Tagged `Suspended` — `commission.responsibility.ExecutorOutcomeSuspended`.
+    Suspended(ExecutorOutcomeSuspended),
+}
+
+/// ExecutorOutcomeNeedsHumanJudgment — `commission.responsibility.ExecutorOutcomeNeedsHumanJudgment`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecutorOutcomeNeedsHumanJudgment {
+    /// `request` — `commission.responsibility.HumanDecisionRequest`.
+    pub request: HumanDecisionRequest,
+}
+
+/// ExecutorOutcomeProposedAction — `commission.responsibility.ExecutorOutcomeProposedAction`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecutorOutcomeProposedAction {
+    /// `action` — `String`.
+    pub action: String,
+    /// `arguments` — `commission.responsibility.ProposedActionArguments`.
+    pub arguments: ProposedActionArguments,
+}
+
+/// ExecutorOutcomeSuspended — `commission.responsibility.ExecutorOutcomeSuspended`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecutorOutcomeSuspended {
+    /// `reason` — `commission.responsibility.SuspensionReason`.
+    pub reason: SuspensionReason,
 }
 
 /// The states of `commission.responsibility.Frontier`, as runtime values.
@@ -168,6 +232,19 @@ pub struct FrontierObligation {
     pub open: bool,
 }
 
+/// GovernorError — `commission.responsibility.GovernorError`: one of a closed set of names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GovernorError {
+    /// `UnknownCase`.
+    UnknownCase,
+    /// `GovernorUnavailable`.
+    GovernorUnavailable,
+}
+
+/// HumanDecisionRequest — `commission.responsibility.HumanDecisionRequest`: a distinct wrapper around `Json`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HumanDecisionRequest(pub crate::json::Value);
+
 /// The states of `commission.responsibility.Observation`, as runtime values.
 ///
 /// Synthesised from the lifecycle, so the two cannot disagree. Which *moves* are legal is not
@@ -186,6 +263,10 @@ pub struct ObservationId(pub crate::primitives::Uuid);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrincipalId(pub String);
 
+/// ProposedActionArguments — `commission.responsibility.ProposedActionArguments`: a distinct wrapper around `Json`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProposedActionArguments(pub crate::json::Value);
+
 /// The states of `commission.responsibility.Run`, as runtime values.
 ///
 /// Synthesised from the lifecycle, so the two cannot disagree. Which *moves* are legal is not
@@ -200,6 +281,77 @@ pub enum RunState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunId(pub crate::primitives::Uuid);
 
+/// RunOutcome — `commission.responsibility.RunOutcome`: one of a fixed set of shapes, tagged on the wire by `kind`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RunOutcome {
+    /// Tagged `Completed` — `commission.responsibility.RunOutcomeCompleted`.
+    Completed(RunOutcomeCompleted),
+    /// Tagged `NeedsAuthority` — `commission.responsibility.RunOutcomeNeedsAuthority`.
+    NeedsAuthority(RunOutcomeNeedsAuthority),
+    /// Tagged `NeedsExternalEvidence` — `commission.responsibility.RunOutcomeNeedsExternalEvidence`.
+    NeedsExternalEvidence(RunOutcomeNeedsExternalEvidence),
+    /// Tagged `NeedsHumanJudgment` — `commission.responsibility.RunOutcomeNeedsHumanJudgment`.
+    NeedsHumanJudgment(RunOutcomeNeedsHumanJudgment),
+    /// Tagged `NoAdmissibleAction` — `commission.responsibility.Unit`.
+    NoAdmissibleAction(Unit),
+    /// Tagged `Suspended` — `commission.responsibility.RunOutcomeSuspended`.
+    Suspended(RunOutcomeSuspended),
+}
+
+/// RunOutcomeCompleted — `commission.responsibility.RunOutcomeCompleted`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunOutcomeCompleted {
+    /// `outcome` — `String`.
+    pub outcome: String,
+}
+
+/// RunOutcomeNeedsAuthority — `commission.responsibility.RunOutcomeNeedsAuthority`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunOutcomeNeedsAuthority {
+    /// `request` — `String`.
+    pub request: String,
+}
+
+/// RunOutcomeNeedsExternalEvidence — `commission.responsibility.RunOutcomeNeedsExternalEvidence`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunOutcomeNeedsExternalEvidence {
+    /// `requirements` — `List<String>`.
+    pub requirements: Vec<String>,
+}
+
+/// RunOutcomeNeedsHumanJudgment — `commission.responsibility.RunOutcomeNeedsHumanJudgment`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunOutcomeNeedsHumanJudgment {
+    /// `request` — `commission.responsibility.HumanDecisionRequest`.
+    pub request: HumanDecisionRequest,
+}
+
+/// RunOutcomeSuspended — `commission.responsibility.RunOutcomeSuspended`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunOutcomeSuspended {
+    /// `reason` — `commission.responsibility.SuspensionReason`.
+    pub reason: SuspensionReason,
+}
+
+/// SuspensionReason — `commission.responsibility.SuspensionReason`: one of a fixed set of shapes, tagged on the wire by `kind`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SuspensionReason {
+    /// Tagged `Authority` — `Json`.
+    Authority(crate::json::Value),
+    /// Tagged `Budget` — `Json`.
+    Budget(crate::json::Value),
+    /// Tagged `Dependency` — `List<commission.responsibility.CaseId>`.
+    Dependency(Vec<CaseId>),
+    /// Tagged `Evidence` — `List<String>`.
+    Evidence(Vec<String>),
+    /// Tagged `ExternalAvailability` — `Json`.
+    ExternalAvailability(crate::json::Value),
+    /// Tagged `Human` — `commission.responsibility.HumanDecisionRequest`.
+    Human(HumanDecisionRequest),
+    /// Tagged `Time` — `Json`.
+    Time(crate::json::Value),
+}
+
 /// Truth — `commission.responsibility.Truth`: one of a closed set of names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Truth {
@@ -210,6 +362,10 @@ pub enum Truth {
     /// `Unknown`.
     Unknown,
 }
+
+/// Unit — `commission.responsibility.Unit`: a distinct wrapper around `Boolean`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Unit(pub bool);
 
 /// What Agent — `commission.responsibility.Agent` — holds, apart from where it is in its lifecycle.
 ///
@@ -891,6 +1047,10 @@ pub struct EvidenceData {
     ///
     /// Carries `observations`: `commission.responsibility.Evidence` references many `commission.responsibility.Observation`.
     pub observation_ids: Vec<ObservationId>,
+    /// `facts` — `Json`.
+    pub facts: crate::json::Value,
+    /// `provenance` — `Json`.
+    pub provenance: crate::json::Value,
 }
 
 /// The states of `commission.responsibility.Evidence`, at the type level.
@@ -1159,6 +1319,10 @@ pub struct ObservationData {
     pub source: String,
     /// `subject` — `String`.
     pub subject: String,
+    /// `observed_at` — `Timestamp`.
+    pub observed_at: crate::primitives::Timestamp,
+    /// `payload` — `Json`.
+    pub payload: crate::json::Value,
 }
 
 /// The states of `commission.responsibility.Observation`, at the type level.

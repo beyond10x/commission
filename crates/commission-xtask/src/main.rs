@@ -24,8 +24,9 @@ const GENERATED: &str = "generated/rust/commission";
 const GENERATED_PACKAGE: &str = "commission";
 /// The specification, relative to the repository root.
 const SPECIFICATION: &str = "ess";
-/// The sources that must not define a model type, relative to the repository root.
-const COMMISSION_SRC: &str = "crates/commission/src";
+/// The sources that must not define a model type, relative to the repository root: the crate and
+/// the testkit whose fakes stand in for its ports.
+const HAND_MODEL_SOURCES: [&str; 2] = ["crates/commission/src", "crates/commission-testkit/src"];
 /// The manifest that must take the model from the generated crate, relative to the root.
 const COMMISSION_MANIFEST: &str = "crates/commission/Cargo.toml";
 /// The crate root that must re-export the generated crate, relative to the root.
@@ -34,12 +35,6 @@ const COMMISSION_LIB: &str = "crates/commission/src/lib.rs";
 const MODEL_REEXPORT: &str = "model";
 /// Synthesis state: per-run anchor id, inode and absolute root. Never compared, never committed.
 const ESS_OUTPUT: &str = ".ess-output";
-/// Hand-written definitions that share a name with a generated type and that a named later story
-/// replaces. Each is allowed, and reported, until that story lands.
-const PENDING_REPLACEMENT: [(&str, &str); 2] = [
-    ("ExecutorOutcome", "story:agent-executor-port"),
-    ("AuthorityDecision", "story:authority-provider-port"),
-];
 
 #[derive(Debug, Parser)]
 #[command(name = "commission-xtask", about = "Repository checks for Commission")]
@@ -68,12 +63,13 @@ enum Command {
         #[arg(long)]
         generated: Option<PathBuf>,
     },
-    /// Fail when a source file defines, or renames something to, a type the generated crate
-    /// declares.
+    /// Fail when a source file of `b10x-commission` or `b10x-commission-testkit` defines, or
+    /// renames something to, a type the generated crate declares.
     NoHandModel {
-        /// Sources to scan. Defaults to `<root>/crates/commission/src`.
+        /// A source directory to scan; repeat for more. Defaults to `<root>/crates/commission/src`
+        /// and `<root>/crates/commission-testkit/src`.
         #[arg(long)]
-        src: Option<PathBuf>,
+        src: Vec<PathBuf>,
         /// The generated crate whose type names are reserved. Defaults to
         /// `<root>/generated/rust/commission`.
         #[arg(long)]
@@ -119,7 +115,14 @@ fn run(cli: Cli) -> Result<(), String> {
             &generated.unwrap_or_else(|| root.join(GENERATED)),
         ),
         Command::NoHandModel { src, generated } => no_hand_model(
-            &src.unwrap_or_else(|| root.join(COMMISSION_SRC)),
+            &if src.is_empty() {
+                HAND_MODEL_SOURCES
+                    .iter()
+                    .map(|dir| root.join(dir))
+                    .collect()
+            } else {
+                src
+            },
             &generated.unwrap_or_else(|| root.join(GENERATED)),
         ),
     }
@@ -540,35 +543,44 @@ fn generated_type_names(generated: &Path) -> Result<BTreeSet<String>, String> {
     Ok(names)
 }
 
-fn no_hand_model(src: &Path, generated: &Path) -> Result<(), String> {
+fn no_hand_model(srcs: &[PathBuf], generated: &Path) -> Result<(), String> {
     let names = generated_type_names(generated)?;
     let mut findings = Vec::new();
-    for (path, text) in rust_sources(src)? {
+    let mut sources = Vec::new();
+    for src in srcs {
+        sources.extend(rust_sources(src)?);
+    }
+    for (path, text) in sources {
         for found in hand_model_items(&parse(&path, &text)?, &names) {
-            let at = format!("{}:{}", path.display(), found.line);
-            match PENDING_REPLACEMENT
-                .iter()
-                .find(|(name, _)| found.is_definition && *name == found.name)
-            {
-                Some((_, story)) => println!(
-                    "note: {at}: `{}` shares a name with a generated type; allowed until {story} \
-                     replaces it",
-                    found.item
+            let problem = match found.problem {
+                Problem::ModelType => format!(
+                    "is a hand-written model type; take it from the generated crate \
+                     (`b10x_commission::{MODEL_REEXPORT}`)"
                 ),
-                None => findings.push(format!(
-                    "{at}: `{}` is a hand-written model type; take it from the generated crate \
-                     (`b10x_commission::{MODEL_REEXPORT}`)",
-                    found.item
-                )),
-            }
+                Problem::Include => "brings in source this check cannot read; write the items \
+                                     in a scanned file instead"
+                    .to_string(),
+                Problem::PathAttribute => "loads a module file this check does not follow; \
+                                           remove the attribute so the module lies under a \
+                                           scanned directory"
+                    .to_string(),
+            };
+            findings.push(format!(
+                "{}:{}: `{}` {problem}",
+                path.display(),
+                found.line,
+                found.item
+            ));
         }
     }
     if findings.is_empty() {
-        println!(
-            "{}: no hand-written model type ({} generated type names checked)",
-            src.display(),
-            names.len()
-        );
+        for src in srcs {
+            println!(
+                "{}: no hand-written model type ({} generated type names checked)",
+                src.display(),
+                names.len()
+            );
+        }
         Ok(())
     } else {
         Err(findings.join("\n"))
@@ -579,13 +591,32 @@ fn no_hand_model(src: &Path, generated: &Path) -> Result<(), String> {
 struct Found {
     line: usize,
     item: String,
-    name: String,
-    is_definition: bool,
+    problem: Problem,
 }
+
+/// Why a finding is refused.
+#[derive(Debug, PartialEq, Eq)]
+enum Problem {
+    /// A definition of, or a rename to, a generated type's name.
+    ModelType,
+    /// `include!`, whose source the check cannot read.
+    Include,
+    /// A `#[path]` module, whose file the check does not follow.
+    PathAttribute,
+}
+
+/// The keywords that open a type definition, in source or in a macro's tokens.
+const TYPE_KEYWORDS: [&str; 5] = ["struct", "enum", "type", "union", "trait"];
 
 /// Every item definition named after a generated type, and every `use … as <name>` that gives
 /// something else a generated type's name, anywhere in the file. Raw identifiers count as the
 /// identifier; literals and comments are not code and are not read.
+///
+/// Macros are not expanded. Instead the tokens of every macro — `macro_rules!` bodies and every
+/// invocation, in any position — are read for a type keyword directly followed by a generated
+/// name, and refused as a definition. `include!` is refused outright, and so is a module carrying a
+/// `#[path]` attribute (directly or through `cfg_attr`): both bring in source from a file the scan
+/// does not read.
 fn hand_model_items(file: &syn::File, names: &BTreeSet<String>) -> Vec<Found> {
     struct Scan<'a> {
         names: &'a BTreeSet<String>,
@@ -599,10 +630,48 @@ fn hand_model_items(file: &syn::File, names: &BTreeSet<String>) -> Vec<Found> {
                 self.found.push(Found {
                     line: ident.span().start().line,
                     item: format!("{keyword} {name}"),
-                    name,
-                    is_definition: true,
+                    problem: Problem::ModelType,
                 });
             }
+        }
+
+        /// A type keyword directly followed by a generated name, at any depth of `tokens`.
+        fn macro_tokens(&mut self, tokens: proc_macro2::TokenStream) {
+            let mut keyword: Option<String> = None;
+            for tree in tokens {
+                match tree {
+                    proc_macro2::TokenTree::Ident(ident) => {
+                        if let Some(keyword) = keyword.take() {
+                            let name = ident.unraw().to_string();
+                            if self.names.contains(&name) {
+                                self.found.push(Found {
+                                    line: ident.span().start().line,
+                                    item: format!("{keyword} {name}"),
+                                    problem: Problem::ModelType,
+                                });
+                            }
+                        }
+                        let word = ident.to_string();
+                        if TYPE_KEYWORDS.contains(&word.as_str()) {
+                            keyword = Some(word);
+                        }
+                    }
+                    proc_macro2::TokenTree::Group(group) => {
+                        keyword = None;
+                        self.macro_tokens(group.stream());
+                    }
+                    _ => keyword = None,
+                }
+            }
+        }
+
+        /// Whether `tokens` hold `path =` at their top level, as a `cfg_attr` that sets a path does.
+        fn sets_path(tokens: &proc_macro2::TokenStream) -> bool {
+            let trees: Vec<_> = tokens.clone().into_iter().collect();
+            trees.windows(2).any(|pair| {
+                matches!(&pair[0], proc_macro2::TokenTree::Ident(ident) if ident == "path")
+                    && matches!(&pair[1], proc_macro2::TokenTree::Punct(punct) if punct.as_char() == '=')
+            })
         }
     }
 
@@ -638,10 +707,43 @@ fn hand_model_items(file: &syn::File, names: &BTreeSet<String>) -> Vec<Found> {
                 self.found.push(Found {
                     line: rename.rename.span().start().line,
                     item: format!("use {from} as {to}"),
-                    name: to,
-                    is_definition: false,
+                    problem: Problem::ModelType,
                 });
             }
+        }
+        fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+            if let Some(last) = mac.path.segments.last()
+                && last.ident == "include"
+            {
+                self.found.push(Found {
+                    line: last.ident.span().start().line,
+                    item: "include!".to_string(),
+                    problem: Problem::Include,
+                });
+            }
+            self.macro_tokens(mac.tokens.clone());
+            syn::visit::visit_macro(self, mac);
+        }
+        fn visit_item_mod(&mut self, item: &'ast syn::ItemMod) {
+            for attr in &item.attrs {
+                let form = if attr.path().is_ident("path") {
+                    Some("#[path = …]")
+                } else if attr.path().is_ident("cfg_attr")
+                    && matches!(&attr.meta, syn::Meta::List(list) if Self::sets_path(&list.tokens))
+                {
+                    Some("#[cfg_attr(…, path = …)]")
+                } else {
+                    None
+                };
+                if let Some(form) = form {
+                    self.found.push(Found {
+                        line: attr.pound_token.spans[0].start().line,
+                        item: format!("{form} mod {}", item.ident.unraw()),
+                        problem: Problem::PathAttribute,
+                    });
+                }
+            }
+            syn::visit::visit_item_mod(self, item);
         }
     }
 

@@ -14,7 +14,7 @@ changing it must know. The cross-repository architecture is Atlas ADRs 0066–00
 ## Boundary
 
 - Commission owns the responsibility model and runtime contracts (Atlas ADR 0070): Agent,
-  AgentRevision, CaseRef, Commission, Frontier, Governor, AgentExecutor, AuthorityProvider,
+  AgentRevision, CaseId, Commission, Frontier, Governor, AgentExecutor, AuthorityProvider,
   observation and evidence ports, RunOutcome, suspension.
 - Commission is domain-neutral. AEP is one governor implementation (Atlas ADR 0069).
 - Commission does not become an LLM harness. Shared execution contracts live here; Loom depends on
@@ -66,8 +66,6 @@ questions: the `UNMAPPED:` scan is removed when the ESS release that refuses ope
 - Planned in the AEP store under `.engineering/`, written only through `aep plan artifact`. Body
   drafts go in `.engineering/drafts/` (ignored).
 - Build with `CARGO_TARGET_DIR=$HOME/.cache/b10x-target/commission` (the Taskfile sets it).
-- `b10x-canon` is a git dependency on canon `main`, pinned by `Cargo.lock`. Move the pin only in a
-  story that names the Canon change it takes.
 - Every commit and push is `b10x-bot[bot]`'s through `b10x-gates bot`; every GitHub write goes
   through `b10x-gates api`.
 - Use a managed worktree (`worktree create --repo commission --purpose …`) for changes.

@@ -57,16 +57,162 @@ types:
     kind: newtype
     of: String
 
-  # What the principal delegated to this commission. Commission-local and opaque here
-  # (operator, 2026-10-04); its structure is decided with the AuthorityProvider port (M-005).
+  # What the principal delegated to this commission. Commission-local (operator, 2026-10-04). It is
+  # opaque to Commission: passed to the AuthorityProvider unchanged and read by nobody else.
   - name: commission.responsibility.AuthorityContext
     kind: newtype
     of: Json
 
-  # docs/contracts/commission-executor.md: what an executor may hand back.
-  - name: commission.responsibility.ExecutorOutcome
+  # The payload of a union variant that carries nothing; its value is always true. A stand-in until
+  # ESS supports unit variants, removed then (story:port-skeleton, coordinator decision 1).
+  - name: commission.responsibility.Unit
+    kind: newtype
+    of: Boolean
+
+  # story:governor-port: why a governor could not answer.
+  - name: commission.responsibility.GovernorError
     kind: enum
-    variants: [ProposedAction, NeedsHumanJudgment, Suspended, NoUsefulAction, CompletedLocalReasoning]
+    variants: [UnknownCase, GovernorUnavailable]
+
+  # story:governor-port: whether the governor holds a case complete. Completion is the governor's
+  # determination, never the executor's.
+  - name: commission.responsibility.CompletionDetermination
+    kind: union
+    tag: kind
+    variants:
+      Open: commission.responsibility.Unit
+      Complete: commission.responsibility.CompletionDeterminationComplete
+
+  # The governor's outcome identifier, as the governor reports it.
+  - name: commission.responsibility.CompletionDeterminationComplete
+    kind: struct
+    fields:
+      - name: outcome
+        type: String
+
+  # docs/contracts/commission-executor.md: the arguments of a proposed action, as the model wrote them.
+  - name: commission.responsibility.ProposedActionArguments
+    kind: newtype
+    of: Json
+
+  # What a human is asked to decide. Commission's sources declare no structure for it.
+  - name: commission.responsibility.HumanDecisionRequest
+    kind: newtype
+    of: Json
+
+  # docs/history/beyond10x-agent-sdk-design-pre-commission-name.md:1477-1485: why a run is
+  # suspended. A payload Commission's sources declare nowhere is carried as Json, and no entity is
+  # invented for it.
+  - name: commission.responsibility.SuspensionReason
+    kind: union
+    tag: kind
+    variants:
+      Authority: Json
+      Human: commission.responsibility.HumanDecisionRequest
+      Evidence: List<String>
+      Time: Json
+      Dependency: List<commission.responsibility.CaseId>
+      Budget: Json
+      ExternalAvailability: Json
+
+  # docs/contracts/commission-executor.md: what an executor may hand back. It proposes; it never
+  # completes a case.
+  - name: commission.responsibility.ExecutorOutcome
+    kind: union
+    tag: kind
+    variants:
+      ProposedAction: commission.responsibility.ExecutorOutcomeProposedAction
+      NeedsHumanJudgment: commission.responsibility.ExecutorOutcomeNeedsHumanJudgment
+      Suspended: commission.responsibility.ExecutorOutcomeSuspended
+      NoUsefulAction: commission.responsibility.Unit
+      CompletedLocalReasoning: commission.responsibility.Unit
+
+  # The action is a FrontierAction's `action`; identity, authority and case revision are not part
+  # of a proposal (AGENTS.md § Rules).
+  - name: commission.responsibility.ExecutorOutcomeProposedAction
+    kind: struct
+    fields:
+      - name: action
+        type: String
+      - name: arguments
+        type: commission.responsibility.ProposedActionArguments
+
+  - name: commission.responsibility.ExecutorOutcomeNeedsHumanJudgment
+    kind: struct
+    fields:
+      - name: request
+        type: commission.responsibility.HumanDecisionRequest
+
+  - name: commission.responsibility.ExecutorOutcomeSuspended
+    kind: struct
+    fields:
+      - name: reason
+        type: commission.responsibility.SuspensionReason
+
+  # story:authority-provider-port: what an AuthorityProvider answers at the call. Distinct from the
+  # stored AuthorityDecision entity.
+  - name: commission.responsibility.AuthorityVerdict
+    kind: union
+    tag: kind
+    variants:
+      Allow: commission.responsibility.Unit
+      Deny: commission.responsibility.AuthorityVerdictDeny
+      ApprovalRequired: commission.responsibility.AuthorityVerdictApprovalRequired
+
+  - name: commission.responsibility.AuthorityVerdictDeny
+    kind: struct
+    fields:
+      - name: reason
+        type: String
+
+  - name: commission.responsibility.AuthorityVerdictApprovalRequired
+    kind: struct
+    fields:
+      - name: request
+        type: String
+
+  # story:run-outcomes: how a run ended or paused.
+  - name: commission.responsibility.RunOutcome
+    kind: union
+    tag: kind
+    variants:
+      Completed: commission.responsibility.RunOutcomeCompleted
+      Suspended: commission.responsibility.RunOutcomeSuspended
+      NeedsAuthority: commission.responsibility.RunOutcomeNeedsAuthority
+      NeedsHumanJudgment: commission.responsibility.RunOutcomeNeedsHumanJudgment
+      NeedsExternalEvidence: commission.responsibility.RunOutcomeNeedsExternalEvidence
+      NoAdmissibleAction: commission.responsibility.Unit
+
+  # The governor's outcome identifier, as the governor reports it.
+  - name: commission.responsibility.RunOutcomeCompleted
+    kind: struct
+    fields:
+      - name: outcome
+        type: String
+
+  - name: commission.responsibility.RunOutcomeSuspended
+    kind: struct
+    fields:
+      - name: reason
+        type: commission.responsibility.SuspensionReason
+
+  - name: commission.responsibility.RunOutcomeNeedsAuthority
+    kind: struct
+    fields:
+      - name: request
+        type: String
+
+  - name: commission.responsibility.RunOutcomeNeedsHumanJudgment
+    kind: struct
+    fields:
+      - name: request
+        type: commission.responsibility.HumanDecisionRequest
+
+  - name: commission.responsibility.RunOutcomeNeedsExternalEvidence
+    kind: struct
+    fields:
+      - name: requirements
+        type: List<String>
 
   # docs/contracts/protocol-core.md: three-valued truth.
   - name: commission.responsibility.Truth
@@ -256,6 +402,10 @@ entities:
         type: String
       - name: subject
         type: String
+      - name: observed_at
+        type: Timestamp
+      - name: payload
+        type: Json
     lifecycle:
       initial: Reported
       states: [Reported]
@@ -277,6 +427,10 @@ entities:
         type: String
       - name: observation_ids
         type: List<commission.responsibility.ObservationId>
+      - name: facts
+        type: Json
+      - name: provenance
+        type: Json
     relations:
       - name: case
         kind: references

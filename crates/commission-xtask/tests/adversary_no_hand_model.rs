@@ -1,5 +1,5 @@
-//! Adversary cases for `no-hand-model`: hand-written model types the check does not see, and one
-//! non-definition it flags.
+//! Adversary cases for `no-hand-model`: hand-written model types the check must see, the one it
+//! still does not, and a non-definition it must not flag.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -124,11 +124,10 @@ fn adversary_flags_every_entity_the_story_says_is_generated() {
 
 /// A `#[path]` module compiles into `b10x-commission` from outside `src/`.
 ///
-/// Known limit of story:generated-responsibility-model: `no-hand-model` reads only the `.rs` files
-/// under `src/` and does not follow `#[path]` modules or `include!`, so today it passes this case.
-/// The assertion pins that behaviour; it must flip to a refusal when the check learns path modules.
+/// `no-hand-model` does not follow the attribute; since `story:port-skeleton` it refuses the
+/// `#[path]` module itself, naming the file and line (this case was a pinned known limit before).
 #[test]
-fn adversary_known_limit_path_module_outside_src_passes() {
+fn adversary_path_module_outside_src_is_refused() {
     let src = sources(
         "path_module_outside_src",
         &[
@@ -140,12 +139,13 @@ fn adversary_known_limit_path_module_outside_src_passes() {
         ],
     );
     let out = no_hand_model(&src);
+    let stderr = stderr(&out);
     assert!(
-        out.status.success(),
-        "known limit of story:generated-responsibility-model changed: no-hand-model now refuses \
-         AgentId compiled in through #[path]. Flip this case to assert the refusal now that the \
-         check follows path modules:\n{}",
-        stderr(&out)
+        !out.status.success()
+            && stderr
+                .lines()
+                .any(|line| line.contains("lib.rs:1:") && line.contains("#[path")),
+        "no-hand-model passed a #[path] module compiled in from outside src/:\n{stderr}"
     );
 }
 
