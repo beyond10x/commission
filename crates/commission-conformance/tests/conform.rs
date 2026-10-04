@@ -13,7 +13,8 @@
 //! The Rust producer profile has no `skipped` category: a scenario the target cannot answer is
 //! reported `unsupported`. The check therefore holds `unsupported` to the same rule as `skipped`
 //! (named in `ess/SKIPPED.md` or refused), and refuses `error` outright, since an execution
-//! failure hides whatever the scenario would have shown.
+//! failure hides whatever the scenario would have shown. It also refuses an `ess/SKIPPED.md` entry
+//! naming a scenario the report records as passed.
 //!
 //! [`CommissionTarget`]: b10x_commission_conformance::CommissionTarget
 
@@ -144,6 +145,13 @@ fn violations(report: &Value, named: &BTreeSet<String>) -> Vec<String> {
                     "expectation 3: the {category} scenario `{id}` is not named in ess/SKIPPED.md"
                 ));
             }
+        }
+    }
+
+    // A skip is for a scenario the target cannot answer; one it answers and passes is not skipped.
+    for id in named {
+        if passed.contains(id) {
+            found.push(format!("skipped entry {id} names a passing scenario"));
         }
     }
 

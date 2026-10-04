@@ -14,6 +14,7 @@ tasks:
       - task: ess-gate
       - task: drift
       - task: no-hand-model
+      - task: conform
       - task: deps-guard
       - cargo fmt --check
       - cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -28,6 +29,11 @@ tasks:
     desc: Fail unless ess/ validates strictly, compiles, synthesizes with 0 refusals and carries no UNMAPPED marker (ADR 0076).
     cmds:
       - cargo test --locked -p b10x-commission --test ess_gate
+
+  conform:
+    desc: Run the conformance suite synthesized from ess/ against b10x-commission and fail unless its report passes.
+    cmds:
+      - cargo test --locked -p b10x-commission-conformance --test conform
 
   deps-guard:
     desc: Fail when b10x-commission depends on b10x-loom, b10x-canon or a crate in model-provider-deny.txt (ADR 0075).
