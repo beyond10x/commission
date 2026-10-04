@@ -48,7 +48,7 @@ tasks:
       - cargo run -q --locked -p commission-xtask -- drift
 
   no-hand-model:
-    desc: Fail when crates/commission/src defines, or renames something to, a type the generated crate declares.
+    desc: Fail when crates/commission/src or crates/commission-testkit/src defines, or renames something to, a type the generated crate declares.
     cmds:
       - cargo run -q --locked -p commission-xtask -- no-hand-model
 

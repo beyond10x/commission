@@ -1,4 +1,4 @@
-//! Adversary pass 2: the drift binding, the pending-replacement allowance and the drift step's
+//! Adversary pass 2: the drift binding, a rename to a generated name and the drift step's
 //! naming of a changed generated file.
 
 use std::fs;
@@ -104,11 +104,10 @@ fn adversary2_drift_refuses_model_reexported_from_another_crate() {
     );
 }
 
-/// The pending-replacement allowance covers hand-written *definitions* of `ExecutorOutcome` and
-/// `AuthorityDecision`, not a rename of some other type to one of those names.
+/// A rename of some other type to a generated type's name (here `ExecutorOutcome`) is refused.
 #[test]
-fn adversary2_no_hand_model_refuses_a_rename_to_a_pending_replacement_name() {
-    let case = case_dir("no_hand_model_refuses_a_rename_to_a_pending_replacement_name");
+fn adversary2_no_hand_model_refuses_a_rename_to_a_generated_name() {
+    let case = case_dir("no_hand_model_refuses_a_rename_to_a_generated_name");
     let src = case.join("src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
