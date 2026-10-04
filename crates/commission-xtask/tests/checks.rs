@@ -385,6 +385,7 @@ fn repo_copy(case: &Path, with_generated: bool) -> PathBuf {
         "crates/commission",
         "crates/commission-testkit",
         "crates/commission-xtask",
+        "crates/commission-conformance",
     ] {
         copy_tree(&root.join(dir), &copy.join(dir));
     }

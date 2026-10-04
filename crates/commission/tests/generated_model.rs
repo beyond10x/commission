@@ -38,9 +38,39 @@ fn generated_model_reexport() {
     );
 }
 
+/// The scenario ids of the suite synthesized from `ess/` now.
+fn synthesized_scenarios(root: &Path) -> Vec<String> {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("skipped-md-suite-{}.json", std::process::id()));
+    let output = std::process::Command::new("ess")
+        .current_dir(root)
+        .args(["verify", "conform", "synthesize", "--path", "ess", "--out"])
+        .arg(&out)
+        .output()
+        .unwrap_or_else(|error| panic!("`ess` must be on PATH: {error}"));
+    assert!(
+        output.status.success(),
+        "`ess verify conform synthesize --path ess` exited {}:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let suite = std::fs::read_to_string(&out)
+        .unwrap_or_else(|error| panic!("read {}: {error}", out.display()));
+    let _ = std::fs::remove_file(&out);
+    let suite = b10x_commission::model::json::parse(&suite)
+        .unwrap_or_else(|error| panic!("the suite is not JSON: {error}"));
+    match suite.member("scenarios") {
+        Some(Value::Object(scenarios)) => scenarios.iter().map(|(id, _)| id.clone()).collect(),
+        _ => panic!("the suite has no `scenarios` object"),
+    }
+}
+
 #[test]
-fn skipped_file_starts_empty() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../ess/SKIPPED.md");
+fn every_skipped_entry_names_a_synthesized_scenario_and_gives_a_reason() {
+    let manifest = std::env::var_os("CARGO_MANIFEST_DIR")
+        .unwrap_or_else(|| panic!("CARGO_MANIFEST_DIR is unset: run this test through cargo"));
+    let root = Path::new(&manifest).join("../..");
+    let path = root.join("ess/SKIPPED.md");
     let body = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("{} must exist: {error}", path.display()));
 
@@ -49,9 +79,26 @@ fn skipped_file_starts_empty() {
         "{} does not open with the header:\n{body}",
         path.display()
     );
-    let listed: Vec<&str> = body[SKIPPED_HEADER.len()..]
+    let scenarios = synthesized_scenarios(&root);
+    assert!(
+        !scenarios.is_empty(),
+        "the suite synthesized from ess/ holds no scenario"
+    );
+    for line in body[SKIPPED_HEADER.len()..]
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .collect();
-    assert!(listed.is_empty(), "skipped scenarios listed: {listed:?}");
+    {
+        let (id, reason) = line
+            .strip_prefix("- ")
+            .and_then(|entry| entry.split_once(": "))
+            .unwrap_or_else(|| panic!("`{line}` is not `- <scenario id>: <reason>`"));
+        assert!(
+            !reason.trim().is_empty(),
+            "the skip of `{id}` gives no reason"
+        );
+        assert!(
+            scenarios.iter().any(|scenario| scenario == id.trim()),
+            "the skip of `{id}` names no scenario of the suite synthesized from ess/"
+        );
+    }
 }
