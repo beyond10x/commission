@@ -7,3 +7,4 @@ repository.workspace = true
 
 [dependencies]
 b10x-canon = { git = "https://github.com/beyond10x/canon", branch = "main" }
+commission = { path = "../../generated/rust/commission" }

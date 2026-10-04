@@ -11,7 +11,9 @@ tasks:
     desc: Format, lint, test.
     cmds:
       - task: spec
-      - cargo fmt --all --check
+      - task: drift
+      - task: no-hand-model
+      - cargo fmt --check
       - cargo clippy --workspace --all-targets --locked -- -D warnings
       - cargo test --workspace --locked
 
@@ -19,6 +21,30 @@ tasks:
     desc: Validate the ESS specification.
     cmds:
       - ess specify validate --path ess
+
+  generate:
+    desc: Rewrite generated/rust/commission/ from a fresh synthesis of ess/.
+    cmds:
+      - task: generate-bootstrap
+      - cargo run -q --locked -p commission-xtask -- generate
+
+  generate-bootstrap:
+    desc: Write generated/rust/commission/ when it is absent, so cargo can load the workspace.
+    internal: true
+    status:
+      - test -f generated/rust/commission/Cargo.toml
+    cmds:
+      - ess generate synthesize --path ess --target rust --layout crate --out generated/rust/commission
+
+  drift:
+    desc: Fail when generated/rust/commission/ differs from a fresh synthesis of ess/, or b10x-commission does not take its model from it.
+    cmds:
+      - cargo run -q --locked -p commission-xtask -- drift
+
+  no-hand-model:
+    desc: Fail when crates/commission/src defines, or renames something to, a type the generated crate declares.
+    cmds:
+      - cargo run -q --locked -p commission-xtask -- no-hand-model
 
   plan:
     desc: Validate the AEP planning store.
