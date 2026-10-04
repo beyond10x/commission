@@ -322,10 +322,9 @@ fn gate_names_an_added_marker() {
 /// An invariant on Frontier that no view publishes, so synthesis cannot witness it.
 const UNWITNESSED_INVARIANT: &str = "    invariants:\n      - case_revision >= 0\n";
 
-/// A command creating a Frontier, which obliges the scenario the invariant above refuses.
-const ISSUING_COMMAND: &str = "
-commands:
-  - name: commission.responsibility.IssueFrontier
+/// A command creating a Frontier, which obliges the scenario the invariant above refuses: an item
+/// of the domain's `commands:` list.
+const ISSUING_COMMAND: &str = "  - name: commission.responsibility.IssueFrontier
     input:
       - name: case_id
         type: commission.responsibility.CaseId
@@ -342,13 +341,25 @@ commands:
         sets:
           case_id: input.case_id
           case_revision: input.case_revision
+";
 
-events:
-  - name: commission.responsibility.FrontierIssued
+/// The event [`ISSUING_COMMAND`] emits: an item of the domain's `events:` list.
+const ISSUED_EVENT: &str = "  - name: commission.responsibility.FrontierIssued
     fields:
       - name: frontier_id
         type: commission.responsibility.FrontierId
 ";
+
+/// `text` with `item` added to its top-level `section` list, opening the section at the end when
+/// the domain has none. A second top-level key of the same name would not be YAML ess accepts.
+fn add_to_section(text: &str, section: &str, item: &str) -> String {
+    let header = format!("\n{section}:\n");
+    match text.matches(&header).count() {
+        0 => format!("{text}{header}{item}"),
+        1 => text.replacen(&header, &format!("{header}{item}"), 1),
+        n => panic!("the domain opens `{section}:` {n} times"),
+    }
+}
 
 /// Expectation 3: ess 0.52.0 exits 0 while it refuses a scenario, so the count is what fails the
 /// gate. A copy of `ess/` whose synthesis refuses one scenario (ESS-SYNTH-011) fails at step 3,
@@ -368,12 +379,13 @@ fn gate_fails_on_a_refusal_ess_exits_zero_for() {
         "{}: expected exactly one Frontier lifecycle ending in `[Issued]`",
         domain.display()
     );
-    let mut text = text.replacen(
+    let text = text.replacen(
         lifecycle_end,
         &format!("{lifecycle_end}{UNWITNESSED_INVARIANT}"),
         1,
     );
-    text.push_str(ISSUING_COMMAND);
+    let text = add_to_section(&text, "commands", ISSUING_COMMAND);
+    let text = add_to_section(&text, "events", ISSUED_EVENT);
     fs::write(&domain, &text).unwrap_or_else(|error| panic!("write {}: {error}", domain.display()));
 
     let failure = match gate(&copy, &scratch.dir) {
