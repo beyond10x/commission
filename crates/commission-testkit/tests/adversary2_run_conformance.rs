@@ -543,7 +543,16 @@ fn store() -> RunStore {
     })
 }
 
-/// Runs every scenario of `suite` against fresh ports from `ports`: `(scenarios, failures)`.
+/// The scenarios this runner answers: those of the Run commands and the Run lifecycle. The
+/// action-request revalidation scenarios are answered by `story:commission-ess-conformance`.
+const RUN_SCENARIO_PREFIXES: [&str; 4] = [
+    "commission.responsibility.StartRun/",
+    "commission.responsibility.SuspendRun/",
+    "commission.responsibility.ResumeRun/",
+    "commission.responsibility.Run/",
+];
+
+/// Runs every Run scenario of `suite` against fresh ports from `ports`: `(scenarios, failures)`.
 fn run_suite<P: RunStorage + Context>(
     suite: &Value,
     ports: impl Fn() -> P,
@@ -551,8 +560,16 @@ fn run_suite<P: RunStorage + Context>(
     let Some(Value::Object(scenarios)) = suite.member("scenarios") else {
         panic!("the suite holds no scenarios");
     };
+    let scenarios: Vec<&(String, Value)> = scenarios
+        .iter()
+        .filter(|(id, _)| {
+            RUN_SCENARIO_PREFIXES
+                .iter()
+                .any(|prefix| id.starts_with(prefix))
+        })
+        .collect();
     let mut failures = Vec::new();
-    for (id, scenario) in scenarios {
+    for (id, scenario) in &scenarios {
         let mut runner = Runner::new(ports());
         let Some(Value::Array(steps)) = scenario.member("steps") else {
             failures.push(format!("{id}: no steps"));
