@@ -72,15 +72,12 @@ const config: Config = {
             {label: 'What Commission is', to: '/docs/'},
             {label: 'A run', to: '/docs/concepts/a-run'},
             {label: 'Domain model', to: '/docs/reference/domain-model'},
-            {label: 'Status', to: '/docs/status'},
           ],
         },
         {
-          title: 'Family',
+          title: 'Project',
           items: [
-            {label: 'Loom', href: 'https://beyond10x.github.io/loom/'},
-            {label: 'ESS', href: 'https://beyond10x.github.io/ess/'},
-            {label: 'Canon', href: 'https://beyond10x.github.io/canon/'},
+            {label: 'Status', to: '/docs/status'},
             {label: 'Source', href: 'https://github.com/beyond10x/commission'},
           ],
         },
@@ -90,4 +87,4 @@ const config: Config = {
   } satisfies Preset.ThemeConfig,
 };
 
-export default withProductSite(config, {landing: './product.json', product: 'commission', mark: 'Co'});
+export default withProductSite(config, {landing: './product.json', product: 'commission'});

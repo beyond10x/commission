@@ -1,9 +1,10 @@
 ---
 title: AgentExecutor (sketch)
 description: The design sketch of the executor contract. The executor proposes; the governor decides.
+lede: The executor proposes; the governor decides. One executor contract should serve every kind of executor.
+source: docs/contracts/commission-executor.md, a design sketch
+source_url: https://github.com/beyond10x/commission/blob/main/docs/contracts/commission-executor.md
 ---
-
-# AgentExecutor
 
 :::note[Design sketch]
 

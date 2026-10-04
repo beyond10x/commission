@@ -1,18 +1,16 @@
 ---
-title: A run
+title: 'A run: propose, recheck, then act'
+sidebar_label: A run
 description: Propose, recheck, then act. How a run is meant to turn a proposal into an effect.
+lede: A selection made on stale state is not permission. Every mutating action is revalidated immediately before it happens, against the current case revision, frontier, authority and environment capability.
+source: crates/commission/src/runtime.rs and Atlas ADR 0082
+source_url: https://github.com/beyond10x/commission/blob/main/crates/commission/src/runtime.rs
 ---
 
-# A run: propose, recheck, then act
+:::caution[The loop executes no effect yet]
 
-A selection made on stale state is not permission. Every mutating action is revalidated immediately
-before it happens, against the current case revision, frontier, authority and environment
-capability.
-
-:::caution[The loop is not written yet]
-
-The ports and checks behind steps 1 to 4 exist, but the runtime loop that runs them in this order
-is **planned**.
+The local runtime loop, `run_until_blocked`, runs steps 1 to 4 in this order today. It records
+each action request with its revalidation outcome and executes none of them.
 Step 5 is **decided design, not shipped code**. See [Status](../status.md).
 
 :::

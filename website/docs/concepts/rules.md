@@ -1,11 +1,10 @@
 ---
 title: Rules
 description: What a model may and may not supply, and how Commission fails.
+lede: These hold for every executor, whatever runs inside it.
+source: The rules in the repository's AGENTS.md
+source_url: https://github.com/beyond10x/commission/blob/main/AGENTS.md#rules
 ---
-
-# Rules
-
-These hold for every executor, whatever runs inside it.
 
 ## The model is not trusted context
 
