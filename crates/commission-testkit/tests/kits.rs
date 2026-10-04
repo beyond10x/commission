@@ -154,17 +154,36 @@ impl GovernorFixture for PinnedGovernorFixture {
 /// The authority fixture over Commission's static fake: the backing's table becomes the fake's.
 struct FakeAuthorityFixture;
 
-impl AuthorityFixture for FakeAuthorityFixture {
-    type Provider = StaticAuthorityProvider;
+// Adversary pass 2, finding 6: the fake must see the live backing, so its table is rebuilt at each decision.
+struct LiveStaticAuthorityProvider {
+    backing: Backing,
+}
 
-    fn provider(&self, backing: Backing) -> StaticAuthorityProvider {
-        backing.entries().into_iter().fold(
-            StaticAuthorityProvider::new(),
-            |provider, (capability, answer)| match answer {
-                Ok(verdict) => provider.answer(capability, verdict),
-                Err(error) => provider.fail(capability, error.message),
-            },
-        )
+impl AuthorityProvider for LiveStaticAuthorityProvider {
+    fn decide(
+        &self,
+        commission: &CommissionData,
+        capability: &str,
+    ) -> Result<AuthorityVerdict, AuthorityProviderError> {
+        self.backing
+            .entries()
+            .into_iter()
+            .fold(
+                StaticAuthorityProvider::new(),
+                |provider, (capability, answer)| match answer {
+                    Ok(verdict) => provider.answer(capability, verdict),
+                    Err(error) => provider.fail(capability, error.message),
+                },
+            )
+            .decide(commission, capability)
+    }
+}
+
+impl AuthorityFixture for FakeAuthorityFixture {
+    type Provider = LiveStaticAuthorityProvider;
+
+    fn provider(&self, backing: Backing) -> LiveStaticAuthorityProvider {
+        LiveStaticAuthorityProvider { backing }
     }
 }
 
