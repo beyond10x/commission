@@ -27,7 +27,7 @@ use b10x_commission::model::responsibility::{
     RunOutcomeNeedsHumanJudgment, RunOutcomeSuspended, RunState, RunStateConflict, StartRun,
     StartRunOutcome, SuspendRun, SuspendRunOutcome, SuspensionReason, Unit, commission_state,
 };
-use b10x_commission::outcome::{Derived, RunStore, derive};
+use b10x_commission::outcome::{CapabilityVerdict, Derived, RunStore, derive};
 use b10x_commission::ports::authority::{AuthorityCheck, check_authority};
 use b10x_commission::ports::executor::AgentExecutor;
 use b10x_commission::ports::governor::Governor;
@@ -140,7 +140,7 @@ fn derived(row: &Row) -> Derived {
         ExecutorOutcome::ProposedAction(proposed) => match admit(&frontier, &proposed.action) {
             Admission::NeedsAuthority(needs) => {
                 match check_authority(&row.authority, &commission, &needs.capability) {
-                    AuthorityCheck::Decided(verdict) => Some(verdict),
+                    AuthorityCheck::Decided(verdict) => Some((needs.capability, verdict)),
                     AuthorityCheck::Refused(error) => {
                         panic!("{}: the provider failed: {error}", row.name)
                     }
@@ -163,7 +163,17 @@ fn derived(row: &Row) -> Derived {
         row.name
     );
 
-    derive(&determination, &frontier, &outcome, verdict.as_ref())
+    derive(
+        &determination,
+        &frontier,
+        &outcome,
+        verdict
+            .as_ref()
+            .map(|(capability, verdict)| CapabilityVerdict {
+                capability,
+                verdict,
+            }),
+    )
 }
 
 /// Expectations 1 to 6: one row each, and a second row for expectation 1.
@@ -435,4 +445,77 @@ fn run_outcome_derivation() {
     }
     resume_continues_the_same_run();
     run_outcome_is_the_generated_type();
+}
+
+/// A verdict counts only for the capability it was obtained for: the one the frontier names for
+/// the proposed action. A verdict for another capability is treated like no verdict, so the
+/// frontier decides; this frontier admits nothing and holds no open obligation.
+#[test]
+fn authority_verdict_binds_to_its_capability() {
+    let case = CaseId(CASE.to_owned());
+    let governor = FakeGovernor::new();
+    governor.script(
+        case.clone(),
+        [Answer::at(4).with_items(
+            Vec::new(),
+            Vec::new(),
+            vec![action(
+                "deploy",
+                ActionStatus::ApprovalRequired,
+                Some("prod.deploy"),
+            )],
+        )],
+    );
+    let frontier = governor
+        .frontier(&case)
+        .unwrap_or_else(|error| panic!("frontier call failed: {error:?}"));
+    let determination = governor
+        .completion(&case)
+        .unwrap_or_else(|error| panic!("completion call failed: {error:?}"));
+    let outcome = proposal("deploy");
+
+    let allow = AuthorityVerdict::Allow(Unit(true));
+    let approval = AuthorityVerdict::ApprovalRequired(AuthorityVerdictApprovalRequired {
+        request: "Q".to_owned(),
+    });
+    let derive_with = |capability: &str, verdict: &AuthorityVerdict| {
+        derive(
+            &determination,
+            &frontier,
+            &outcome,
+            Some(CapabilityVerdict {
+                capability,
+                verdict,
+            }),
+        )
+    };
+    let nothing_admissible = Derived::Ended(RunOutcome::NoAdmissibleAction(Unit(true)));
+
+    assert_eq!(
+        derive_with("prod.deploy", &allow),
+        Derived::Continue,
+        "an allow for the frontier's capability"
+    );
+    assert_eq!(
+        derive_with("prod.deploy", &approval),
+        Derived::Ended(RunOutcome::NeedsAuthority(RunOutcomeNeedsAuthority {
+            request: "Q".to_owned(),
+        })),
+        "approval required for the frontier's capability"
+    );
+    assert_eq!(
+        derive_with("logs.read", &allow),
+        nothing_admissible,
+        "an allow for another capability must not continue"
+    );
+    assert_eq!(
+        derive_with("logs.read", &approval),
+        nothing_admissible,
+        "approval required for another capability must not ask for it"
+    );
+    assert_eq!(
+        derive(&determination, &frontier, &outcome, None),
+        nothing_admissible,
+        "no verdict"
+    );
 }

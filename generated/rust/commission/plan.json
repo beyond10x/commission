@@ -2,8 +2,8 @@
   "provenance": {
     "system": "commission",
     "specification_version": "v1",
-    "source_digest": "a3b6896a96a91b19581506d7622aa6bba27b271020f12d78673c828a61542674",
-    "contract_digest": "376f5be8445e9cc0e3df87c1f9b7e389768aa141b5e21a3d0cb87fac737a44cd"
+    "source_digest": "277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4",
+    "contract_digest": "b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a"
   },
   "scope": {
     "profile": "component-skeletons",
@@ -405,6 +405,90 @@
     {
       "kind": "entity_lifecycle",
       "source": "commission.responsibility.Run",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_contract",
+      "source": "commission.responsibility.ResumeRun",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_behavior",
+      "source": "commission.responsibility.ResumeRun",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_contract",
+      "source": "commission.responsibility.StartRun",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_behavior",
+      "source": "commission.responsibility.StartRun",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_contract",
+      "source": "commission.responsibility.SuspendRun",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "command_behavior",
+      "source": "commission.responsibility.SuspendRun",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "event_type",
+      "source": "commission.responsibility.RunResumed",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "event_type",
+      "source": "commission.responsibility.RunStarted",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "event_type",
+      "source": "commission.responsibility.RunSuspended",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "error_type",
+      "source": "commission.responsibility.RunStateConflict",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "view_type",
+      "source": "commission.responsibility.RunStates",
+      "disposition": {
+        "disposition": "generated"
+      }
+    },
+    {
+      "kind": "view_query",
+      "source": "commission.responsibility.RunStates",
       "disposition": {
         "disposition": "generated"
       }

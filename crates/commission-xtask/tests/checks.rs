@@ -255,6 +255,99 @@ fn no_hand_model_names_every_model_type_in_any_source_file() {
     }
 }
 
+/// `story:run-outcomes`: a hand-written `enum RunOutcome` in the module that derives outcomes is
+/// refused, and so is a hand-written copy of each type the Run commands bring into the generated
+/// crate — their ports, inputs, outcomes, events, error and view.
+#[test]
+fn no_hand_model_refuses_a_hand_written_run_outcome_and_run_command_types() {
+    for (item, name) in [
+        ("pub enum", "RunOutcome"),
+        ("pub trait", "RunStorage"),
+        ("pub trait", "Context"),
+        ("pub struct", "Generated"),
+        ("pub struct", "UnmetObligation"),
+        ("pub struct", "StartRun"),
+        ("pub enum", "StartRunOutcome"),
+        ("pub struct", "SuspendRun"),
+        ("pub enum", "SuspendRunOutcome"),
+        ("pub struct", "ResumeRun"),
+        ("pub enum", "ResumeRunOutcome"),
+        ("pub struct", "RunStarted"),
+        ("pub struct", "RunSuspended"),
+        ("pub struct", "RunResumed"),
+        ("pub struct", "RunStateConflict"),
+        ("pub struct", "RunStates"),
+    ] {
+        let case =
+            case_dir("no_hand_model_refuses_a_hand_written_run_outcome_and_run_command_types");
+        let src = case.join("src");
+        copy_tree(&repo_root().join("crates/commission/src"), &src);
+        let outcome = src.join("outcome.rs");
+        let mut body = fs::read_to_string(&outcome).expect("read outcome.rs");
+        if !body.ends_with('\n') {
+            body.push('\n');
+        }
+        let tail = if item.ends_with("trait") {
+            " {}"
+        } else {
+            " { A }"
+        };
+        let tail = if item.ends_with("struct") { ";" } else { tail };
+        body.push_str(&format!("{item} {name}{tail}\n"));
+        let line = body.lines().count();
+        fs::write(&outcome, body).expect("write outcome.rs");
+
+        let out = no_hand_model(&src);
+        let stderr = text(&out.stderr);
+        let keyword = item.trim_start_matches("pub ");
+        assert!(
+            !out.status.success()
+                && stderr.lines().any(|found| {
+                    found.contains(&format!("outcome.rs:{line}"))
+                        && found.contains(&format!("`{keyword} {name}`"))
+                }),
+            "no-hand-model passed a hand-written `{item} {name}` in outcome.rs:\n{stderr}"
+        );
+    }
+}
+
+/// The generated crate declares traits inside modules as well as at the top of a file:
+/// `obligations::StartRunBehavior`, `obligations::RunStatesQuery`, `run_state::Marker`. A
+/// hand-written trait with such a name is refused, naming its file and line.
+#[test]
+fn no_hand_model_refuses_a_trait_named_after_a_nested_generated_trait() {
+    for name in [
+        "StartRunBehavior",
+        "SuspendRunBehavior",
+        "ResumeRunBehavior",
+        "RunStatesQuery",
+        "Marker",
+    ] {
+        let case = case_dir("no_hand_model_refuses_a_trait_named_after_a_nested_generated_trait");
+        let src = case.join("src");
+        copy_tree(&repo_root().join("crates/commission/src"), &src);
+        let outcome = src.join("outcome.rs");
+        let mut body = fs::read_to_string(&outcome).expect("read outcome.rs");
+        if !body.ends_with('\n') {
+            body.push('\n');
+        }
+        body.push_str(&format!("pub trait {name} {{}}\n"));
+        let line = body.lines().count();
+        fs::write(&outcome, body).expect("write outcome.rs");
+
+        let out = no_hand_model(&src);
+        let stderr = text(&out.stderr);
+        assert!(
+            !out.status.success()
+                && stderr.lines().any(|found| {
+                    found.contains(&format!("outcome.rs:{line}"))
+                        && found.contains(&format!("`trait {name}`"))
+                }),
+            "no-hand-model passed a hand-written `trait {name}` in outcome.rs:\n{stderr}"
+        );
+    }
+}
+
 #[test]
 fn no_hand_model_does_not_flag_uses_comments_or_longer_names() {
     let case = case_dir("no_hand_model_does_not_flag_uses_comments_or_longer_names");

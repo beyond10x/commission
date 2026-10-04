@@ -1,14 +1,14 @@
 <!--
   generated from commission v1
-  model digest a3b6896a96a91b19581506d7622aa6bba27b271020f12d78673c828a61542674
-  contract digest 376f5be8445e9cc0e3df87c1f9b7e389768aa141b5e21a3d0cb87fac737a44cd
+  model digest 277056ebe75e6eeba0f32e739403d2898e04d9e7db35fdb5794c6e803995bca4
+  contract digest b9d039400832e04b3894b8f9bc1f4e70c0a16725fbb7b214b05664222d81ea9a
   do not edit: regenerate with `ess synthesize --layout crate`
 -->
 # Synthesis plan — commission v1
 
 Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regenerate with `ess synthesize --layout crate`.
 
-57 capabilities: **57 generated**, **0 obligations**, **0 refused**. An obligation is yours to implement against its contract; a refusal is a fact about this synthesis scope, not about the specification.
+69 capabilities: **69 generated**, **0 obligations**, **0 refused**. An obligation is yours to implement against its contract; a refusal is a fact about this synthesis scope, not about the specification.
 
 ## Generated
 
@@ -71,6 +71,27 @@ Scope: `component-skeletons`, laid out as `crate`, planned by `ess-synth`. Regen
 | entity lifecycle | `commission.responsibility.Frontier` |
 | entity lifecycle | `commission.responsibility.Observation` |
 | entity lifecycle | `commission.responsibility.Run` |
+| command contract | `commission.responsibility.ResumeRun` |
+| command behaviour | `commission.responsibility.ResumeRun` |
+| command contract | `commission.responsibility.StartRun` |
+| command behaviour | `commission.responsibility.StartRun` |
+| command contract | `commission.responsibility.SuspendRun` |
+| command behaviour | `commission.responsibility.SuspendRun` |
+| event type | `commission.responsibility.RunResumed` |
+| event type | `commission.responsibility.RunStarted` |
+| event type | `commission.responsibility.RunSuspended` |
+| error type | `commission.responsibility.RunStateConflict` |
+| view type | `commission.responsibility.RunStates` |
+| view query | `commission.responsibility.RunStates` |
+
+## Ports — yours to provide
+
+What the specification fully determines is generated; what it cannot determine is an obligation. A generated command behaviour or view query reads and writes through the ports below, and they are yours to provide: synthesis generates each port's contract and never an implementation of one, so where instances live stays your decision.
+
+| port | what it answers |
+| --- | --- |
+| storage | one per entity a generated behaviour or query reads or writes: the instance stored under an identity; storing, replacing and removing one; and every stored instance, in the order the store keeps them |
+| context | where a generated behaviour asks it: the caller's attributes, every identity and value the specification says the implementation assigns, and whether each `external:` branch is taken |
 
 ## Obligations — yours to implement
 
