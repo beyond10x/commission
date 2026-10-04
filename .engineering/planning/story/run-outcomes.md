@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:run-outcomes
 kind: story
-status: proposed
+status: implemented
 title: Run outcomes and suspension reasons, with completion only from the governor
 summary: Generated RunOutcome, the rule deriving a run's outcome, and the Run's Suspended state with suspend and resume continuing the same run.
 refs:
@@ -29,9 +29,11 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 16
+revision: 19
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "proposed", to: "active", at: "2026-10-04T03:14:52Z", actor: "human:timo", revision: 17, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "active", to: "implemented", at: "2026-10-04T03:47:11Z", actor: "human:timo", revision: 19, decided_on: {"recorded":{"test_result":1,"review_outcome":5,"verification":1}}}
 ---
 ## Outcome
 
@@ -153,8 +155,10 @@ passes. Each row is scripted from a governor determination, an executor outcome 
 decision, using the fakes. These are its expectations:
 
 1. **Completed.** The governor reports the case complete with outcome `X`, so the derived outcome
-   is completed carrying `X`. `CompletedLocalReasoning` on a case the governor reports open derives
-   continue, not completed.
+   is completed carrying `X`. `CompletedLocalReasoning` on a case the governor reports open is never completed:
+   it derives continue when the frontier admits an action, and otherwise the frontier rule's
+   outcome (needs external evidence, or no admissible action), so a run cannot loop on a frontier
+   that admits nothing (coordinator decision, wave 2026-10-04-w5).
 2. **Suspended.** The executor returns `Suspended` with a `SuspensionReason`, so the derived outcome
    is suspended carrying the same reason.
 3. **Needs authority.** The executor proposes an action the frontier marks `ApprovalRequired`, and
@@ -192,4 +196,5 @@ decision, using the fakes. These are its expectations:
 
 TASKBOARD M-007 (build pack `TASKBOARD.md` § Commission); `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md`
 §§ 14, 35; operator decision of 2026-10-04 on run continuity; Atlas ADR 0080.
+
 

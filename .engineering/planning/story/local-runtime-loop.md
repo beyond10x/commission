@@ -21,7 +21,7 @@ scope:
   path: crates/commission-testkit/tests/runtime_loop.rs
 - confidence: cited
   path: crates/commission/src/runtime.rs
-revision: 12
+revision: 13
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 7, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -145,3 +145,11 @@ TASKBOARD M-009 (build pack `TASKBOARD.md` § Commission); Atlas `docs/design/go
 - Its "execution bindings are in Loom" reason for running no effect is replaced by Atlas ADR
   0082: Commission makes the effect invocation; this story still runs none (commission
   story:effect-invocation).
+
+
+## From wave 2026-10-04-w5 (run-outcomes, adversary pass 2, F4)
+
+`outcome::derive` returns Continue for `NoUsefulAction` when the frontier admits an action. The
+loop decides what Continue after a NoUsefulAction means: it must not re-ask the same executor on an
+unchanged frontier without bound. Settle a rule here (for example: NoUsefulAction twice on the same
+frontier revision ends the run as no admissible action) and test it.

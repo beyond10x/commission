@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:observation-evidence-ports
 kind: story
-status: proposed
+status: implemented
 title: Observation and evidence reach the governor through separate ports
 summary: Separate observation and evidence ports in ports/evidence.rs; evidence names one or more observations; nothing in Commission turns an observation or trace into evidence.
 refs:
@@ -23,9 +23,11 @@ scope:
   path: crates/commission-testkit/tests/observation_evidence.rs
 - confidence: cited
   path: crates/commission/src/ports/evidence.rs
-revision: 11
+revision: 13
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "proposed", to: "active", at: "2026-10-04T03:14:52Z", actor: "human:timo", revision: 12, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "active", to: "implemented", at: "2026-10-04T03:47:10Z", actor: "human:timo", revision: 13, decided_on: {"recorded":{"test_result":1,"review_outcome":6,"verification":1}}}
 ---
 ## Outcome
 
