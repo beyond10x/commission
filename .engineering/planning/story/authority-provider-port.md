@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:authority-provider-port
 kind: story
-status: proposed
+status: implemented
 title: AuthorityProvider port decides outside the model and fails toward less authority
 summary: Allow, deny or approval-required at the call; a provider error is a refusal, never an allow.
 refs:
@@ -22,9 +22,11 @@ scope:
   path: crates/commission-testkit/tests/authority_port.rs
 - confidence: cited
   path: crates/commission/src/ports/authority.rs
-revision: 9
+revision: 11
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "proposed", to: "active", at: "2026-10-04T02:47:36Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"review_outcome":3}}}
+- {from: "active", to: "implemented", at: "2026-10-04T03:13:41Z", actor: "human:timo", revision: 11, decided_on: {"recorded":{"test_result":1,"review_outcome":6,"verification":1}}}
 ---
 ## Outcome
 

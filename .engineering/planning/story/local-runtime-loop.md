@@ -21,7 +21,7 @@ scope:
   path: crates/commission-testkit/tests/runtime_loop.rs
 - confidence: cited
   path: crates/commission/src/runtime.rs
-revision: 11
+revision: 12
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 7, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -132,3 +132,16 @@ static fake authority provider, and checks these expectations:
 
 TASKBOARD M-009 (build pack `TASKBOARD.md` § Commission); Atlas `docs/design/governed-autonomy/projects/commission-TASKS.md`;
 `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` §§ 13-14; Atlas ADR 0080.
+
+
+## From wave 2026-10-04-w4 (governor-port, agent-executor-port adversary passes)
+
+- `FakeGovernor::calls()` and `ScriptedExecutor::calls()` are separate per-fake logs with no
+  shared sequence. Acceptance 1 (case loaded and frontier obtained before the executor runs, per
+  iteration) needs the order across fakes: read `governor.calls()` from inside a test executor
+  wrapper, or add a shared sequence in this story's test file.
+- All three governor methods consume one answer queue, so a loop script counts every governor
+  call per iteration; an added `completion()` check shifts later revisions (acceptance 3, 5, 8).
+- Its "execution bindings are in Loom" reason for running no effect is replaced by Atlas ADR
+  0082: Commission makes the effect invocation; this story still runs none (commission
+  story:effect-invocation).

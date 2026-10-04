@@ -25,7 +25,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 12
+revision: 13
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
 ---
@@ -161,3 +161,11 @@ With the ActionRequest entity this story declares the relation the operator deci
 (decision-blocker:authority-decision-owner, cleared): `AuthorityDecision` gains an `action_request_id`
 field and a `references` relation to exactly one `ActionRequest`; a decision never covers a later
 request. `ess specify validate --path ess` must pass with it.
+
+
+## From wave 2026-10-04-w4 (frontier-admission, adversary pass 2, F5)
+
+`admission::admit` has four results: admissible, needs authority, refused, and (through the
+refusal reasons) blocked. The revalidation command above lists three outcomes. It gains a
+needs-authority outcome: an `ApprovalRequired` action is never revalidated as admitted without an
+authority decision. Settle the outcome's shape in this story's ESS change.

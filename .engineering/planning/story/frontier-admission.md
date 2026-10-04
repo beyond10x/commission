@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:frontier-admission
 kind: story
-status: proposed
+status: implemented
 title: Admission check for proposed actions over Commission's own frontier
 summary: Sort a proposed action as admissible, needs-authority or refused against the generated Frontier's FrontierAction values from story:ess-hard-gate; no Canon type.
 refs:
@@ -27,9 +27,11 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 12
+revision: 14
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"review_outcome":1}}}
+- {from: "proposed", to: "active", at: "2026-10-04T02:47:36Z", actor: "human:timo", revision: 13, decided_on: {"recorded":{"review_outcome":1}}}
+- {from: "active", to: "implemented", at: "2026-10-04T03:13:42Z", actor: "human:timo", revision: 14, decided_on: {"recorded":{"test_result":1,"review_outcome":5,"verification":1}}}
 ---
 ## Outcome
 

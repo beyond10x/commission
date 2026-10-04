@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:governor-port
 kind: story
-status: proposed
+status: implemented
 title: Governor port returns the frontier for a case's current revision
 summary: 'Typed Governor port with a scripted fake: current revision, frontier, completion determination, typed errors.'
 refs:
@@ -21,9 +21,11 @@ scope:
   path: crates/commission-testkit/tests/governor_port.rs
 - confidence: cited
   path: crates/commission/src/ports/governor.rs
-revision: 8
+revision: 10
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "proposed", to: "active", at: "2026-10-04T02:47:36Z", actor: "human:timo", revision: 9, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "active", to: "implemented", at: "2026-10-04T03:13:41Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"test_result":1,"review_outcome":6,"verification":1}}}
 ---
 ## Outcome
 

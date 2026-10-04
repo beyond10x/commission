@@ -2,7 +2,7 @@
 format: aep.planning-md/3
 id: story:agent-executor-port
 kind: story
-status: proposed
+status: implemented
 title: AgentExecutor port over generated outcomes, with no model-provider or Loom dependency
 summary: Executor returns a generated ExecutorOutcome that cannot complete a case; declares SuspensionReason and ProposedActionArguments; task deps-guard refuses model-provider crates and b10x-loom.
 refs:
@@ -23,11 +23,15 @@ scope:
   path: crates/commission-testkit/tests/executor_port.rs
 - confidence: cited
   path: crates/commission/src/ports/executor.rs
+- confidence: cited
+  path: docs/contracts/commission-executor.md
 - confidence: inferred
   path: model-provider-deny.txt
-revision: 10
+revision: 14
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "proposed", to: "active", at: "2026-10-04T02:47:36Z", actor: "human:timo", revision: 11, decided_on: {"recorded":{"review_outcome":2}}}
+- {from: "active", to: "implemented", at: "2026-10-04T03:13:42Z", actor: "human:timo", revision: 14, decided_on: {"recorded":{"test_result":1,"review_outcome":4,"verification":1}}}
 ---
 ## Outcome
 
@@ -50,7 +54,7 @@ A scripted fake executor goes in `crates/commission-testkit/src/fake_executor.rs
 `story:port-skeleton`. It returns whatever outcome its script names.
 
 Commission stays an SDK, not an LLM harness. The dependency guard is Rust, inside this story's
-test (`AGENTS.md` § Rules). The test reads `cargo tree -p b10x-commission -e normal --prefix none`
+test (`AGENTS.md` § Rules). The test reads `cargo tree -p b10x-commission -e normal --all-features --target all --prefix none`
 and fails when the listing names `b10x-loom` or a crate on the repository's model-provider deny
 list. The deny list is `model-provider-deny.txt` at the repository root, beside `Taskfile.yml`. A
 new task, `deps-guard`, runs that test file (`cargo test -p b10x-commission-testkit --test
@@ -124,7 +128,7 @@ checks these expectations:
    through `AgentExecutor`, returns that variant with its payload unchanged.
 2. A `Suspended` outcome carries a generated `SuspensionReason`. A `ProposedAction` outcome carries
    generated `ProposedActionArguments`.
-3. The real `cargo tree -p b10x-commission -e normal --prefix none` listing names neither
+3. The real `cargo tree -p b10x-commission -e normal --all-features --target all --prefix none` listing names neither
    `b10x-loom` nor any crate in `model-provider-deny.txt`.
 4. The guard's matcher is given a canned listing that contains the line `b10x-loom v0.0.0`, and a
    second one that contains the first crate in `model-provider-deny.txt`. For each listing it
@@ -143,3 +147,4 @@ checks these expectations:
 TASKBOARD M-004 (build pack `TASKBOARD.md` § Commission); `docs/contracts/commission-executor.md`;
 Atlas ADRs 0070, 0075, 0080; `epic:commission-core` Acceptance ("`cargo tree` shows no
 model-provider crate").
+
