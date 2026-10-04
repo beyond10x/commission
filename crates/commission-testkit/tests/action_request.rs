@@ -10,15 +10,16 @@
 //! Source paths are read when the test runs (`CARGO_MANIFEST_DIR`), never baked in at build time:
 //! a build directory shared between worktrees reuses binaries across them.
 
-use b10x_commission::action_request::{request, revalidate};
+use b10x_commission::action_request::{command_input, request, revalidate};
 use b10x_commission::admission::admit;
 use b10x_commission::model::json::{self, Value};
 use b10x_commission::model::primitives::Uuid;
 use b10x_commission::model::responsibility::{
     ActionNeedsAuthority, ActionNotAdmitted, ActionRequest, ActionRequestId, ActionRequestStale,
-    ActionRequestState, ActionStatus, Admission, CaseId, ExecutorOutcomeProposedAction,
-    FrontierAction, ProposedActionArguments, RevalidateActionRequestOutcome, RunId, Unit,
-    action_request_state,
+    ActionRequestState, ActionStatus, Admission, CaseId, CompletionDetermination,
+    ExecutorOutcomeProposedAction, Frontier, FrontierAction, GovernorError,
+    ProposedActionArguments, RevalidateActionRequest, RevalidateActionRequestOutcome, RunId, Unit,
+    action_request_state, frontier_state,
 };
 use b10x_commission::ports::governor::Governor;
 use b10x_commission_testkit::fake_governor::{Answer, FakeGovernor, GovernorCall};
@@ -102,8 +103,8 @@ fn request_from(
 }
 
 /// Revalidates `request` against `governor`, which must answer.
-fn revalidated(
-    governor: &FakeGovernor,
+fn revalidated<G: Governor>(
+    governor: &G,
     request: &ActionRequest<action_request_state::Requested>,
 ) -> RevalidateActionRequestOutcome {
     revalidate(governor, request)
@@ -131,6 +132,20 @@ fn stale_request_is_refused_although_admissible_now() {
     assert_eq!(data.expected_case_revision, N, "expected revision");
     assert_eq!(data.action, "merge", "action");
     assert_eq!(data.arguments, arguments(), "arguments");
+
+    // The command input is the whole request, its identity included.
+    assert_eq!(
+        command_input(&at_n),
+        RevalidateActionRequest {
+            action_request_id: ActionRequestId(uuid(1)),
+            run_id: RunId(uuid(0x100)),
+            case_id: case(),
+            expected_case_revision: N,
+            action: "merge".to_owned(),
+            arguments: arguments(),
+        },
+        "the RevalidateActionRequest input for the request"
+    );
 
     // Expectation 4: the arguments are the generated type, reached through the re-export.
     let name = std::any::type_name_of_val(&data.arguments);
@@ -162,9 +177,10 @@ fn stale_request_is_refused_although_admissible_now() {
         "a request made at N, revalidated at N+1"
     );
     assert_eq!(
-        governor.calls().get(calls_before),
-        Some(&GovernorCall::CurrentRevision(case())),
-        "revalidation must read the case's current revision from the governor first"
+        governor.calls()[calls_before..],
+        [GovernorCall::CurrentRevision(case())],
+        "a stale revision is decided from the current revision the governor reports, before any \
+         frontier is read"
     );
 
     // Expectation 2: the same request built at N+1 passes revalidation.
@@ -267,6 +283,71 @@ fn approval_required_action_is_not_admitted_without_authority() {
         },
         "a current request for an ApprovalRequired action"
     );
+}
+
+/// The case moves between the two governor calls of one revalidation: the revision still reads
+/// N, but the frontier is issued for N+1. The request is stale against that frontier, although its
+/// action is admissible there.
+fn frontier_issued_for_a_later_revision_is_stale() {
+    let governor = FakeGovernor::new();
+    let merge = || vec![listed("merge", ActionStatus::Admissible, None)];
+    // Built from the first answer; revalidation reads the second (the revision) and the third
+    // (the frontier).
+    governor.script(case(), [at(N, merge()), at(N, merge()), at(N + 1, merge())]);
+
+    let at_n = request_from(&governor, 7, "merge");
+    assert_eq!(
+        revalidated(&governor, &at_n),
+        RevalidateActionRequestOutcome::Stale {
+            error: ActionRequestStale {
+                expected_case_revision: N,
+                current_case_revision: N + 1,
+            },
+        },
+        "a frontier issued for N+1 to a request made at N"
+    );
+}
+
+/// A governor that answers with a frontier for another case, admitting the action there.
+struct OtherCaseGovernor(FakeGovernor);
+
+impl Governor for OtherCaseGovernor {
+    fn current_revision(&self, case: &CaseId) -> Result<i64, GovernorError> {
+        self.0.current_revision(case)
+    }
+
+    fn frontier(&self, _case: &CaseId) -> Result<Frontier<frontier_state::Issued>, GovernorError> {
+        self.0.frontier(&CaseId("case-other".to_owned()))
+    }
+
+    fn completion(&self, case: &CaseId) -> Result<CompletionDetermination, GovernorError> {
+        self.0.completion(case)
+    }
+}
+
+/// A frontier issued for another case admits nothing for this one: the request is refused as not
+/// admitted, with a reason naming both cases.
+fn frontier_for_another_case_is_not_admitted() {
+    let fake = FakeGovernor::new();
+    let merge = || vec![listed("merge", ActionStatus::Admissible, None)];
+    fake.script(case(), [at(N, merge())]);
+    fake.script(CaseId("case-other".to_owned()), [at(N, merge())]);
+
+    let at_n = request_from(&fake, 8, "merge");
+    match revalidated(&OtherCaseGovernor(fake), &at_n) {
+        RevalidateActionRequestOutcome::NotAdmitted { error } => {
+            assert_eq!(error.action, "merge", "refused action");
+            assert!(
+                error.reasons.len() == 1
+                    && error.reasons[0].contains("case-other")
+                    && error.reasons[0].contains(CASE)
+                    && error.reasons[0].contains(&uuid(8).0),
+                "the reason does not name both cases: {:?}",
+                error.reasons
+            );
+        }
+        other => panic!("a frontier for another case: {other:?}"),
+    }
 }
 
 /// Expectation 5: the specification declares the action-request command.
@@ -409,6 +490,8 @@ fn action_request_revalidation() {
     stale_request_is_refused_although_admissible_now();
     unlisted_or_blocked_action_is_not_admitted();
     approval_required_action_is_not_admitted_without_authority();
+    frontier_issued_for_a_later_revision_is_stale();
+    frontier_for_another_case_is_not_admitted();
     specification_declares_the_command();
     suite_synthesizes();
     authority_decision_references_one_request();

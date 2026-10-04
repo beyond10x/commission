@@ -569,7 +569,7 @@ fn run_suite<P: RunStorage + Context>(
         })
         .collect();
     let mut failures = Vec::new();
-    for (id, scenario) in scenarios.iter().copied() {
+    for (id, scenario) in &scenarios {
         let mut runner = Runner::new(ports());
         let Some(Value::Array(steps)) = scenario.member("steps") else {
             failures.push(format!("{id}: no steps"));
