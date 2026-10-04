@@ -27,7 +27,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 8
+revision: 9
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
 ---
@@ -59,9 +59,9 @@ advance a case's revision. This story needs no change to the fake.
 
 ## Shared surface
 
-This story is link 7 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 8 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:observation-evidence-ports`, and
-`story:run-outcomes` depends on it. The whole order is in `story:generated-responsibility-model`
+`story:run-outcomes` depends on it. The whole order is in `story:ess-hard-gate`
 § Shared surface. It also depends directly on `story:agent-executor-port`, which owns
 `ProposedActionArguments`.
 
@@ -90,8 +90,11 @@ creates.
   Declare this as a `relations:` entry.
 - Action request -> Commission, many-to-one. This is inferred, not read from any source. § 36 names
   an `actor` without a type, and the executor proposes within one commission's run
-  (`crates/commission/src/lib.rs:53-55`). Write it as an `UNMAPPED:` marker where the entry would
-  go, not as an entry.
+  (`crates/commission/src/lib.rs:53-55`). Whether a commission owns its requests or merely
+  references them is not settled. Under the ESS hard gate (`story:ess-hard-gate`, ADR 0076) no
+  `UNMAPPED:` marker may be written into `ess/`, and a `commission` field without its relation is a
+  foreign key nobody checks. The question is `decision-blocker:action-request-commission`, which
+  blocks this story; once decided, declare the relation as a `relations:` entry.
 - Run -> case revision: `commission.responsibility.Run` field `case_revision`
   (`ess/domains/responsibility.yaml:174-176`, "a proposal made on another revision is stale").
 
@@ -126,8 +129,9 @@ with these expectations:
 
 ## Notes
 
-- Canon: no change. Canon's `Frontier.revision` (canon `crates/canon/src/lib.rs:49`) is the
-  frontier's revision.
+- Canon: no change, and no Canon type is used. The frontier's revision is the generated
+  `Frontier`'s `case_revision` (`ess/domains/responsibility.yaml:192-193`); the action is matched
+  by the `action` string of its `FrontierAction` (`story:ess-hard-gate`).
 - Expectations 6 and 7 need `ess` on `PATH`. `task spec` already does.
 
 ## Source

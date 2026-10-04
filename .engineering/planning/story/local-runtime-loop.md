@@ -26,7 +26,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: inferred
   path: generated/rust/commission/
-revision: 7
+revision: 9
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 7, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -45,7 +45,7 @@ A commission works through these steps:
 6. It consults authority where the frontier requires it.
 7. It either continues or ends the run with a derived run outcome (`story:run-outcomes`).
 
-This is the chain in the build pack's `projects/commission/TASKS.md`:
+This is the chain in Atlas `docs/design/governed-autonomy/projects/commission-TASKS.md` (the build pack's `projects/commission/TASKS.md`):
 `CaseRef -> Governor.frontier() -> AgentExecutor.run() -> revalidate proposed action -> block / suspend / continue`.
 Each loop creates a Run of the commission at the case revision it started against. A suspension
 leaves that Run in `Suspended` with its id unchanged, so a resume continues the same run
@@ -57,10 +57,10 @@ where the test can read it, then reads the frontier again.
 
 ## Shared surface
 
-This story is link 9 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 10 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:run-outcomes` and on
 `story:stale-revision-action-request`, and `story:commission-ess-conformance` depends on it. The
-whole order is in `story:generated-responsibility-model` § Shared surface.
+whole order is in `story:ess-hard-gate` § Shared surface.
 
 ## ESS
 
@@ -123,5 +123,5 @@ static fake authority provider, and checks these expectations:
 
 ## Source
 
-TASKBOARD M-009 (build pack `TASKBOARD.md` § Commission); build pack `projects/commission/TASKS.md`;
+TASKBOARD M-009 (build pack `TASKBOARD.md` § Commission); Atlas `docs/design/governed-autonomy/projects/commission-TASKS.md`;
 `docs/history/beyond10x-agent-sdk-design-pre-commission-name.md` §§ 13-14.

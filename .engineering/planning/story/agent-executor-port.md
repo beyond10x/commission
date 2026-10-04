@@ -17,6 +17,10 @@ relations:
 - serves: vision:governed-autonomy
 scope:
 - confidence: cited
+  path: AGENTS.md
+- confidence: cited
+  path: Cargo.lock
+- confidence: cited
   path: Taskfile.yml
 - confidence: cited
   path: crates/commission-testkit/src/fake_executor.rs
@@ -24,6 +28,8 @@ scope:
   path: crates/commission-testkit/src/lib.rs
 - confidence: inferred
   path: crates/commission-testkit/tests/executor_port.rs
+- confidence: cited
+  path: crates/commission/Cargo.toml
 - confidence: cited
   path: crates/commission/src/lib.rs
 - confidence: cited
@@ -36,7 +42,7 @@ scope:
   path: generated/rust/commission/
 - confidence: inferred
   path: model-provider-deny.txt
-revision: 6
+revision: 8
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -67,6 +73,15 @@ task, `deps-guard`, runs that test file (`cargo test -p b10x-commission-testkit 
 executor_port`), and `check` lists it as its own step. The rule comes from Atlas ADR 0075: Loom
 depends on Commission, never the reverse.
 
+**The Canon dependency goes.** The executor receives the generated `commission.responsibility.Frontier`
+(`story:ess-hard-gate`). This story replaces the last bootstrap signatures that name Canon types:
+`ExecutorOutcome::ProposedAction { action: ActionId, … }` and
+`AgentExecutor::run(&self, &Commission, &Frontier)` (`crates/commission/src/lib.rs:9`, `:24-37`,
+`:53-55`). With them go the `use b10x_canon` line, the `b10x-canon` dependency in
+`crates/commission/Cargo.toml:9`, its entries in `Cargo.lock`, and the `AGENTS.md` § Work bullet that
+describes the Canon pin. No Commission story gives a reason to keep it; a later story that needs
+Canon adds it back and says why.
+
 **Type ownership.** This story declares two types, and later stories only consume them:
 
 - **`SuspensionReason`.** The payload of `ExecutorOutcome::Suspended`
@@ -77,15 +92,16 @@ depends on Commission, never the reverse.
 
 ## Shared surface
 
-This story is link 4 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 5 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:governor-port`, and
 `story:authority-provider-port` depends on it. The full order is in
-`story:generated-responsibility-model` § Shared surface.
+`story:ess-hard-gate` § Shared surface.
 
 The same chain also orders the edits to these files:
 - `Taskfile.yml` (one line in `check`, plus the new `deps-guard` task)
 - `crates/commission/src/lib.rs` and `ports/mod.rs`
 - `crates/commission-testkit/src/lib.rs`
+- `crates/commission/Cargo.toml`, `Cargo.lock` and `AGENTS.md` (the Canon dependency and its bullet)
 
 ## ESS
 
@@ -97,9 +113,10 @@ as an enum with bare variants. Make these changes in `ess/` first, then pass
    `docs/contracts/commission-executor.md:29-47` gives it.
 2. **Declare the proposed action.** A proposed action names an action and its
    `ProposedActionArguments`, which is a `newtype` of `Json` in place of the contract's
-   `arguments_json: String`. The action's identifier is a String newtype, converted to Canon's
-   `ActionId` at the boundary. Identity, authority and case revision are not part of it
-   (`AGENTS.md:25-27`).
+   `arguments_json: String`. The action is named by a `String`, the same type as a
+   `FrontierAction`'s `action` (`story:ess-hard-gate`), so a proposal is matched against the
+   frontier without conversion. No Canon `ActionId` is involved. Identity, authority and case
+   revision are not part of it (`AGENTS.md:25-27`).
 3. **Declare `SuspensionReason`** as a `union` whose variants are the ones in the history design
    § 35 (`docs/history/beyond10x-agent-sdk-design-pre-commission-name.md:1477-1485`): authority,
    human, evidence, time, dependency, budget, external availability. Where a payload's type is
@@ -124,6 +141,8 @@ and a frontier and owns neither.
 - `crates/commission-testkit/tests/executor_port.rs` (new)
 - `model-provider-deny.txt` (new)
 - `Taskfile.yml` (task `deps-guard`; one line in `check`)
+- `crates/commission/Cargo.toml`, `Cargo.lock` (the `b10x-canon` dependency removed)
+- `AGENTS.md` (§ Work: the Canon pin bullet removed)
 - `ess/domains/responsibility.yaml` and `generated/rust/commission/` (chain surface)
 
 ## Acceptance
@@ -140,10 +159,12 @@ checks these expectations:
 4. The guard's matcher is given a canned listing that contains the line `b10x-loom v0.0.0`, and a
    second one that contains the first crate in `model-provider-deny.txt`. For each listing it
    reports a violation that names that crate.
+5. The same real listing names no `b10x-canon`, and `AgentExecutor::run` takes the generated
+   `Frontier` imported through `b10x-commission`'s re-export.
 
 ## Notes
 
-- Canon: no change.
+- Canon: no change to Canon. Commission stops depending on it here (Outcome).
 - The deny list is the repository's own and names each crate it refuses.
 
 ## Source

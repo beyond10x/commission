@@ -30,7 +30,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 8
+revision: 9
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 8, decided_on: {"recorded":{"review_outcome":3}}}
 ---
@@ -72,10 +72,10 @@ output to the observation port is wired by `story:local-runtime-loop`, later in 
 
 ## Shared surface
 
-This story is link 6 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 7 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:authority-provider-port`, and
 `story:stale-revision-action-request` depends on it. The whole order is in
-`story:generated-responsibility-model` § Shared surface.
+`story:ess-hard-gate` § Shared surface.
 
 The same chain orders these edits:
 

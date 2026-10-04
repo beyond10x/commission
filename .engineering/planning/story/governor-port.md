@@ -35,7 +35,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 5
+revision: 6
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -47,12 +47,14 @@ creates `crates/commission/src/ports/mod.rs`. Later port stories each add one li
 Given a commissioned case reference, the port returns three things:
 
 - the case's current revision;
-- the frontier issued for that revision;
+- the frontier issued for that revision, as the generated `commission.responsibility.Frontier`
+  with its Commission-owned claims, obligations and actions (`story:ess-hard-gate`);
 - the governor's determination of whether the case is complete, and with which outcome.
 
 Port failures are typed errors, not strings. There are at least two: an unknown case, and a
 governor that cannot answer. This story replaces the bootstrap signature
-`frontier(&Commission) -> Result<Frontier, String>` (`crates/commission/src/lib.rs:49-51`).
+`frontier(&Commission) -> Result<Frontier, String>` (`crates/commission/src/lib.rs:49-51`), whose
+`Frontier` is `b10x_canon::Frontier`. The port names no Canon type.
 Observation and evidence methods belong to `story:observation-evidence-ports`.
 
 **Fakes live in a new crate.** This story is the first to need a fake, so it creates
@@ -66,10 +68,10 @@ Tests that use a fake therefore live in `crates/commission-testkit/tests/`. The 
 
 ## Shared surface
 
-This story is link 3 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 4 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:frontier-admission`, and
 `story:agent-executor-port` depends on it. The full order is in
-`story:generated-responsibility-model` § Shared surface. Two more files are edited along the same
+`story:ess-hard-gate` § Shared surface. Two more files are edited along the same
 chain: `crates/commission/src/lib.rs` and `ports/mod.rs`, and `Cargo.lock`.
 
 ## ESS
@@ -115,7 +117,9 @@ against the scripted fake governor, with these expectations:
 
 ## Notes
 
-- Canon: no change.
+- Canon: no change, and the port names no Canon type. The case id it answers for is the generated
+  `CaseId`. The `Frontier` import from `b10x_canon` stays in `crates/commission/src/lib.rs` only for
+  the bootstrap `AgentExecutor` trait, which `story:agent-executor-port` replaces.
 - Only the governor determines completion, never the executor
   (`docs/contracts/commission-executor.md:50-52`). This port is where that determination enters
   Commission.

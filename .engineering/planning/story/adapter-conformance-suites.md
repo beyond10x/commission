@@ -28,7 +28,7 @@ scope:
   path: crates/commission-testkit/src/lib.rs
 - confidence: inferred
   path: crates/commission-testkit/tests/kits.rs
-revision: 6
+revision: 7
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":3}}}
 ---
@@ -70,8 +70,8 @@ Not in this story:
 
 ## Shared surface
 
-Link 11, the last, of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
-`generated/rust/commission/` (order in `story:generated-responsibility-model` § Shared surface):
+Link 12, the last, of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+`generated/rust/commission/` (order in `story:ess-hard-gate` § Shared surface):
 depends on `story:commission-ess-conformance`. This story adds no noun and is expected not to change
 either; `crates/commission-testkit/src/lib.rs` is edited along the same chain.
 

@@ -28,7 +28,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: inferred
   path: generated/rust/commission/
-revision: 5
+revision: 6
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 5, decided_on: {"recorded":{"review_outcome":1}}}
 ---
@@ -64,10 +64,10 @@ already exist as precedents: Mandate `crates/mandate-conformance` and Entity Run
 
 ## Shared surface
 
-This story is link 10 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 11 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:local-runtime-loop`, and
 `story:adapter-conformance-suites` depends on it. The whole order is in
-`story:generated-responsibility-model` § Shared surface. The same chain orders this story's edits to
+`story:ess-hard-gate` § Shared surface. The same chain orders this story's edits to
 `Taskfile.yml`, `Cargo.lock` and `ess/SKIPPED.md`.
 
 ## ESS

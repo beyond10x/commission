@@ -32,7 +32,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 6
+revision: 7
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 6, decided_on: {"recorded":{"review_outcome":3}}}
 ---
@@ -66,10 +66,10 @@ is the only reader. Record this in that comment, in place of the deferral.
 
 ## Shared surface
 
-This story is link 5 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 6 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:agent-executor-port`, and
 `story:observation-evidence-ports` depends on it. The full order is in
-`story:generated-responsibility-model` § Shared surface. The same chain also orders the edits to
+`story:ess-hard-gate` § Shared surface. The same chain also orders the edits to
 `crates/commission/src/lib.rs`, `ports/mod.rs` and `crates/commission-testkit/src/lib.rs`.
 
 ## ESS
@@ -125,8 +125,9 @@ runs Commission's authority check against the static fake provider and checks th
 
 ## Notes
 
-- **Canon:** no change. The capability comes from Canon's `ActionStatus::ApprovalRequired { capability }`
-  (canon `crates/canon/src/lib.rs:34-38`).
+- **Canon:** no change, and no Canon type is used. The capability comes from the frontier: the
+  `capability` of a `FrontierAction` whose `status` is `ApprovalRequired` (`story:ess-hard-gate`),
+  which the admission check of `story:frontier-admission` reports as needs-authority.
 - **Mandate:** Mandate is the intended managed implementation. It is not a dependency here.
 
 ## Source

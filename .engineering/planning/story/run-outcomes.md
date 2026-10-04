@@ -30,7 +30,7 @@ scope:
   path: ess/domains/responsibility.yaml
 - confidence: cited
   path: generated/rust/commission/
-revision: 10
+revision: 11
 transitions:
 - {from: "draft", to: "proposed", at: "2026-10-04T00:13:54Z", actor: "human:timo", revision: 10, decided_on: {"recorded":{"review_outcome":2}}}
 ---
@@ -81,10 +81,10 @@ is still open as `decision-blocker:suspension-durable-record`.
 
 ## Shared surface
 
-This story is link 8 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
+This story is link 9 of the `epic:commission-core` chain over `ess/domains/responsibility.yaml` and
 `generated/rust/commission/`. It depends on `story:stale-revision-action-request`, and
 `story:local-runtime-loop` depends on it. The whole order is in
-`story:generated-responsibility-model` § Shared surface.
+`story:ess-hard-gate` § Shared surface.
 
 ## ESS
 
@@ -153,9 +153,11 @@ decision, using the fakes. These are its expectations:
 - **Canon:** no change. The completed outcome carries the governor's outcome identifier as the
   governor reports it through `Governor`. Canon's own outcome model (TASKBOARD C-007) is not needed
   while frontiers come from fakes.
-- **Row 5 is inferred.** No source says when a run needs external evidence. The row maps Canon's
-  `Frontier.obligations` (canon `crates/canon/src/lib.rs:51`) onto the bootstrap
-  `NeedsExternalEvidence { requirements }` (`crates/commission/src/lib.rs:44`).
+- **Row 5 is inferred.** No source says when a run needs external evidence. The row maps the
+  generated `Frontier`'s `obligations` whose `open` is true (`FrontierObligation`,
+  `story:ess-hard-gate`) onto the bootstrap `NeedsExternalEvidence { requirements }`
+  (`crates/commission/src/lib.rs:44`), one requirement per open obligation's `obligation` string.
+  No Canon type is used.
 - **Budget exhaustion is left out.** The history design § 14 also lists `BudgetExhausted`
   (`docs/history/beyond10x-agent-sdk-design-pre-commission-name.md:650-658`). The bootstrap does
   not carry it, and neither does this story.
