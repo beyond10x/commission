@@ -16,8 +16,9 @@ use b10x_commission::model::json::{self, Value};
 use b10x_commission::model::primitives::{Timestamp, Uuid};
 use b10x_commission::model::responsibility::{
     AgentRevisionId, AuthorityContext, CaseId, Commission, CommissionData, CommissionId,
-    EvidenceData, EvidenceId, ExecutorOutcome, ExecutorOutcomeProposedAction, Observation,
-    ObservationData, ObservationId, PrincipalId, ProposedActionArguments, commission_state,
+    EvidenceData, EvidenceId, ExecutorOutcome, ExecutorOutcomeProposedAction, GovernorError,
+    Observation, ObservationData, ObservationId, PrincipalId, ProposedActionArguments,
+    commission_state,
 };
 use b10x_commission::ports::evidence::{
     EvidenceAdapter, EvidenceError, ObservationPort, submit_evidence,
@@ -203,4 +204,163 @@ fn observation_and_evidence_stay_apart() {
         "nothing recorded for the refusal"
     );
     assert_eq!(governor.observations(), observations_before);
+}
+
+/// The fake governor refuses evidence for a case it holds no script for, as it refuses its
+/// `Governor` calls, and `submit_evidence` hands the refusal back.
+#[test]
+fn evidence_for_a_case_the_governor_does_not_hold_is_refused() {
+    let governor = FakeGovernor::new();
+    governor.script(CaseId("case-other".to_owned()), [Answer::at(REVISION)]);
+    let reported = observation(1, "connector:ci", parse(r#"{"conclusion": "success"}"#));
+    assert_eq!(
+        submit_evidence(
+            &governor,
+            "service:ci",
+            evidence(5, "service:ci", vec![reported.observation_id])
+        ),
+        Err(EvidenceError::Governor(GovernorError::UnknownCase)),
+        "the fake does not hold `{CASE}`"
+    );
+    assert_eq!(
+        governor.evidence(),
+        Vec::<EvidenceData>::new(),
+        "nothing recorded for an unknown case"
+    );
+}
+
+/// A trusted producer that is empty or only whitespace names nobody: `submit_evidence` refuses it by
+/// name, even on a case the governor holds, and nothing reaches the governor.
+#[test]
+fn evidence_attributed_to_nobody_is_refused_as_no_producer() {
+    let governor = FakeGovernor::new();
+    governor.script(CaseId(CASE.to_owned()), [Answer::at(REVISION)]);
+    let reported = observation(1, "connector:ci", parse(r#"{"conclusion": "success"}"#));
+    for trusted in ["", " ", "\t\n", "\u{3000}"] {
+        assert_eq!(
+            submit_evidence(
+                &governor,
+                trusted,
+                evidence(6, "service:ci", vec![reported.observation_id.clone()])
+            ),
+            Err(EvidenceError::NoProducer),
+            "the trusted producer {trusted:?} names nobody"
+        );
+    }
+    assert_eq!(
+        governor.evidence(),
+        Vec::<EvidenceData>::new(),
+        "nothing recorded for a record attributed to nobody"
+    );
+    assert_eq!(
+        submit_evidence(
+            &governor,
+            "service:ci",
+            evidence(6, "service:ci", vec![reported.observation_id])
+        ),
+        Ok(()),
+        "the same record with a producer is accepted on this case"
+    );
+}
+
+/// The first and last character of each Unicode 16.0 `Cf` range (read from the Unicode Character
+/// Database, 170 characters in 21 ranges).
+const FORMAT_RANGE_ENDS: [char; 42] = [
+    '\u{00AD}',
+    '\u{00AD}',
+    '\u{0600}',
+    '\u{0605}',
+    '\u{061C}',
+    '\u{061C}',
+    '\u{06DD}',
+    '\u{06DD}',
+    '\u{070F}',
+    '\u{070F}',
+    '\u{0890}',
+    '\u{0891}',
+    '\u{08E2}',
+    '\u{08E2}',
+    '\u{180E}',
+    '\u{180E}',
+    '\u{200B}',
+    '\u{200F}',
+    '\u{202A}',
+    '\u{202E}',
+    '\u{2060}',
+    '\u{2064}',
+    '\u{2066}',
+    '\u{206F}',
+    '\u{FEFF}',
+    '\u{FEFF}',
+    '\u{FFF9}',
+    '\u{FFFB}',
+    '\u{110BD}',
+    '\u{110BD}',
+    '\u{110CD}',
+    '\u{110CD}',
+    '\u{13430}',
+    '\u{1343F}',
+    '\u{1BCA0}',
+    '\u{1BCA3}',
+    '\u{1D173}',
+    '\u{1D17A}',
+    '\u{E0001}',
+    '\u{E0001}',
+    '\u{E0020}',
+    '\u{E007F}',
+];
+
+/// The producer rule, case by case: non-empty, no leading or trailing whitespace, no control or
+/// format character anywhere. A refused producer is never trimmed into an accepted one, and an
+/// accepted producer arrives exactly as named.
+#[test]
+fn the_trusted_producer_arrives_exactly_as_named_or_is_refused() {
+    let governor = FakeGovernor::new();
+    governor.script(CaseId(CASE.to_owned()), [Answer::at(REVISION)]);
+    let reported = observation(1, "connector:ci", parse(r#"{"conclusion": "success"}"#));
+    let submit = |trusted: &str| {
+        submit_evidence(
+            &governor,
+            trusted,
+            evidence(7, "claimed", vec![reported.observation_id.clone()]),
+        )
+    };
+
+    let mut refused: Vec<String> = ["P1\n", " P1", "P1 ", "\tP1\r\n", "P1\u{3000}", "P\u{0}1"]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    refused.extend(FORMAT_RANGE_ENDS.iter().map(|c| format!("P{c}1")));
+    for trusted in &refused {
+        assert_eq!(
+            submit(trusted),
+            Err(EvidenceError::NoProducer),
+            "the trusted producer {trusted:?} is padded or carries a control or format character"
+        );
+    }
+    assert_eq!(
+        governor.evidence(),
+        Vec::<EvidenceData>::new(),
+        "no refused producer reached the governor, trimmed or not"
+    );
+
+    let accepted = [
+        "P1",
+        "service:ci",
+        "P 1",
+        "P\u{00AC}1",
+        "P\u{00AE}1",
+        "P\u{0606}1",
+        "P\u{2010}1",
+        "P\u{1D172}1",
+    ];
+    for trusted in accepted {
+        assert_eq!(submit(trusted), Ok(()), "{trusted:?} names someone");
+    }
+    let arrived: Vec<String> = governor
+        .evidence()
+        .into_iter()
+        .map(|evidence| evidence.producer)
+        .collect();
+    assert_eq!(arrived, accepted, "each producer arrives exactly as named");
 }

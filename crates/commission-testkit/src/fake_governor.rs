@@ -8,8 +8,19 @@
 //!
 //! The frontiers it issues carry the case id, the answer's revision and exactly the claims,
 //! obligations and actions the answer carries: none, unless the answer was given some with
-//! [`Answer::with_items`]. Every call the fake receives is logged, failed calls included
+//! [`Answer::with_items`]. Every `Governor` call the fake receives is logged, failed calls included
 //! ([`FakeGovernor::calls`]).
+//!
+//! The fake also implements the observation and evidence ports. It records what each receives, in
+//! the order received and in two separate records: [`FakeGovernor::observations`] and
+//! [`FakeGovernor::evidence`]. Neither port takes a scripted answer, and neither record ever
+//! receives from the other port.
+//!
+//! Evidence for a case the fake holds no script for is refused with `UnknownCase`, as its
+//! `Governor` calls are, and is not recorded. Evidence naming observation ids the fake never
+//! received is still accepted: `GovernorError` has no variant to refuse it with, and adding one is
+//! a change to `ess/`. Observations are recorded whatever their subject: an observation carries no
+//! case id, and the specification declares no relation from it to a case.
 //!
 //! All of the fake's state sits behind one lock, and a call logs itself, takes its answer and, for
 //! a frontier, its frontier id inside one critical section. Under concurrent calls the k-th logged
@@ -24,6 +35,10 @@ use b10x_commission::model::responsibility::{
     FrontierClaim, FrontierData, FrontierId, FrontierObligation, GovernorError, Unit,
     frontier_state,
 };
+use b10x_commission::model::responsibility::{
+    EvidenceData, Observation, ObservationData, observation_state,
+};
+use b10x_commission::ports::evidence::{AttributedEvidence, EvidencePort, ObservationPort};
 use b10x_commission::ports::governor::Governor;
 
 /// What the fake governor answers to one call on a case.
@@ -120,6 +135,8 @@ struct State {
     scripts: BTreeMap<String, VecDeque<Answer>>,
     issued: u64,
     calls: Vec<GovernorCall>,
+    observations: Vec<ObservationData>,
+    evidence: Vec<EvidenceData>,
 }
 
 impl State {
@@ -172,7 +189,17 @@ impl FakeGovernor {
         self.state().scripts.insert(case.0, answers);
     }
 
-    /// Every call received so far, in the order received, failed calls included.
+    /// Every observation the observation port received so far, in the order received.
+    pub fn observations(&self) -> Vec<ObservationData> {
+        self.state().observations.clone()
+    }
+
+    /// Every evidence record the evidence port received so far, in the order received.
+    pub fn evidence(&self) -> Vec<EvidenceData> {
+        self.state().evidence.clone()
+    }
+
+    /// Every `Governor` call received so far, in the order received, failed calls included.
     pub fn calls(&self) -> Vec<GovernorCall> {
         self.state().calls.clone()
     }
@@ -210,5 +237,27 @@ impl Governor for FakeGovernor {
         self.state()
             .answer(GovernorCall::Completion(case.clone()), case)
             .map(|reply| reply.determination)
+    }
+}
+
+impl ObservationPort for FakeGovernor {
+    fn observe(
+        &self,
+        observation: Observation<observation_state::Reported>,
+    ) -> Result<(), GovernorError> {
+        self.state().observations.push(observation.into_data());
+        Ok(())
+    }
+}
+
+impl EvidencePort for FakeGovernor {
+    fn receive(&self, evidence: AttributedEvidence) -> Result<(), GovernorError> {
+        let evidence = evidence.into_evidence().into_data();
+        let mut state = self.state();
+        if !state.scripts.contains_key(&evidence.case_id.0) {
+            return Err(GovernorError::UnknownCase);
+        }
+        state.evidence.push(evidence);
+        Ok(())
     }
 }
