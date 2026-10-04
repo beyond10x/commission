@@ -51,6 +51,17 @@ types:
     kind: newtype
     of: Uuid
 
+  # The principal a commission acts for. Commission-local (operator, 2026-10-04).
+  - name: commission.responsibility.PrincipalId
+    kind: newtype
+    of: String
+
+  # What the principal delegated to this commission. Commission-local and opaque here
+  # (operator, 2026-10-04); its structure is decided with the AuthorityProvider port (M-005).
+  - name: commission.responsibility.AuthorityContext
+    kind: newtype
+    of: Json
+
   # docs/contracts/commission-executor.md: what an executor may hand back.
   - name: commission.responsibility.ExecutorOutcome
     kind: enum
@@ -112,9 +123,10 @@ entities:
       terminal: [Open]
 
   # Binds one agent revision to one case under a governor (ADR 0070).
-  # UNMAPPED: how many commissions a case may hold at once (one, or many in parallel) is not settled
-  # by the sources; no relation from Case to Commission is declared until a story decides it.
-  # UNMAPPED: principal and authority context are named in commission-design.md without a type.
+  # A case may hold many commissions at once, in parallel (operator, 2026-10-04). Each commission
+  # references exactly one case.
+  # Principal and authority context are Commission-local types (operator, 2026-10-04); binding them
+  # to Mandate is phase-7 work (Atlas epic:ga-governed-effects).
   - name: commission.responsibility.Commission
     identity:
       name: commission_id
@@ -124,6 +136,10 @@ entities:
         type: commission.responsibility.AgentRevisionId
       - name: case_id
         type: commission.responsibility.CaseId
+      - name: principal
+        type: commission.responsibility.PrincipalId
+      - name: authority_context
+        type: commission.responsibility.AuthorityContext
     relations:
       - name: agent_revision
         kind: references
@@ -153,6 +169,8 @@ entities:
     fields:
       - name: commission_id
         type: commission.responsibility.CommissionId
+      # Resuming after a restart continues this same run (operator, 2026-10-04), so run state is
+      # durable; the Suspended state arrives with its command outcome in story M-007.
       # The case revision the run started against; a proposal made on another revision is stale.
       - name: case_revision
         type: Integer
@@ -185,8 +203,6 @@ entities:
       terminal: [Issued]
 
   # docs/contracts/evidence.md: a raw report from a runtime, integration or verifier.
-  # UNMAPPED: which observations an evidence record interprets (one or many) is not settled; no
-  # relation from Evidence to Observation is declared.
   - name: commission.responsibility.Observation
     identity:
       name: observation_id
@@ -215,20 +231,30 @@ entities:
         type: Integer
       - name: producer
         type: String
+      - name: observation_ids
+        type: List<commission.responsibility.ObservationId>
     relations:
       - name: case
         kind: references
         target: commission.responsibility.Case
         cardinality: one
         via: case_id
+      # An evidence record interprets one or more observations (docs/contracts/evidence.md;
+      # operator, 2026-10-04).
+      - name: observations
+        kind: references
+        target: commission.responsibility.Observation
+        cardinality: many
+        via: observation_ids
     lifecycle:
       initial: Submitted
       states: [Submitted]
       terminal: [Submitted]
 
   # Authority stays outside the model; a decision is supplied by an AuthorityProvider.
-  # UNMAPPED: whether a decision belongs to a commission, a case or a single action request is not
-  # settled by the sources.
+  # A decision belongs to exactly one action request at one case revision (operator, 2026-10-04);
+  # a later action needs a new decision. The relation is declared with the action-request entity
+  # (story:stale-revision-action-request).
   - name: commission.responsibility.AuthorityDecision
     identity:
       name: authority_decision_id
