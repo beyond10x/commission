@@ -52,6 +52,10 @@ types:
     kind: newtype
     of: Uuid
 
+  - name: commission.responsibility.ActionRequestId
+    kind: newtype
+    of: Uuid
+
   # The principal a commission acts for. Commission-local (operator, 2026-10-04).
   - name: commission.responsibility.PrincipalId
     kind: newtype
@@ -382,6 +386,14 @@ entities:
       # The case revision the run started against; a proposal made on another revision is stale.
       - name: case_revision
         type: Integer
+    relations:
+      # A request is made inside one run, against that run's case revision, and never outlives it
+      # (decision-blocker:action-request-commission). The commission is reached through the run.
+      - name: requests
+        kind: owns
+        target: commission.responsibility.ActionRequest
+        cardinality: many
+        via: run_id
     # Resuming after a restart continues this same run (operator, 2026-10-04), so run state is
     # durable. Resume keeps the run id and the case revision.
     lifecycle:
@@ -478,10 +490,39 @@ entities:
       states: [Submitted]
       terminal: [Submitted]
 
+  # A proposed action bound to the case revision of the frontier it was chosen from
+  # (docs/history/beyond10x-agent-sdk-design-pre-commission-name.md § 36). The expected revision
+  # comes from the frontier the run was given, never from executor output. The action is a
+  # FrontierAction's `action`. Revalidation takes the request as its input and changes nothing.
+  - name: commission.responsibility.ActionRequest
+    identity:
+      name: action_request_id
+      type: commission.responsibility.ActionRequestId
+    fields:
+      - name: run_id
+        type: commission.responsibility.RunId
+      - name: case_id
+        type: commission.responsibility.CaseId
+      - name: expected_case_revision
+        type: Integer
+      - name: action
+        type: String
+      - name: arguments
+        type: commission.responsibility.ProposedActionArguments
+    relations:
+      - name: case
+        kind: references
+        target: commission.responsibility.Case
+        cardinality: one
+        via: case_id
+    lifecycle:
+      initial: Requested
+      states: [Requested]
+      terminal: [Requested]
+
   # Authority stays outside the model; a decision is supplied by an AuthorityProvider.
   # A decision belongs to exactly one action request at one case revision (operator, 2026-10-04);
-  # a later action needs a new decision. The relation is declared with the action-request entity
-  # (story:stale-revision-action-request).
+  # a later action needs a new decision.
   - name: commission.responsibility.AuthorityDecision
     identity:
       name: authority_decision_id
@@ -491,6 +532,14 @@ entities:
         type: String
       - name: granted
         type: Boolean
+      - name: action_request_id
+        type: commission.responsibility.ActionRequestId
+    relations:
+      - name: action_request
+        kind: references
+        target: commission.responsibility.ActionRequest
+        cardinality: one
+        via: action_request_id
     lifecycle:
       initial: Decided
       states: [Decided]
@@ -501,6 +550,32 @@ errors:
     fields:
       - name: state
         type: commission.responsibility.Run.State
+
+  # The request was made at a revision the case has moved past. Names both revisions.
+  - name: commission.responsibility.ActionRequestStale
+    fields:
+      - name: expected_case_revision
+        type: Integer
+      - name: current_case_revision
+        type: Integer
+
+  # The current frontier does not admit the action: it does not list it, blocks it, or lists it as
+  # ApprovalRequired with no single capability to ask for. Carries the frontier's reasons.
+  - name: commission.responsibility.ActionNotAdmitted
+    fields:
+      - name: action
+        type: String
+      - name: reasons
+        type: List<String>
+
+  # The current frontier lists the action as ApprovalRequired: it is not admitted without an
+  # authority decision for this capability.
+  - name: commission.responsibility.ActionNeedsAuthority
+    fields:
+      - name: action
+        type: String
+      - name: capability
+        type: String
 
 commands:
   - name: commission.responsibility.StartRun
@@ -559,6 +634,44 @@ commands:
       - name: wrong-state
         wrong_state: true
         error: commission.responsibility.RunStateConflict
+
+  # Immediately before anything is done with a request, the request as the run built it is
+  # revalidated. The case's current revision and frontier come from the governor, never from the
+  # input, and the action is re-checked with frontier admission. A stale request is refused even
+  # when its action is admissible now. Answered in this order.
+  - name: commission.responsibility.RevalidateActionRequest
+    input:
+      - name: run_id
+        type: commission.responsibility.RunId
+      - name: case_id
+        type: commission.responsibility.CaseId
+      - name: expected_case_revision
+        type: Integer
+      - name: action
+        type: String
+      - name: arguments
+        type: commission.responsibility.ProposedActionArguments
+    outcomes:
+      - name: stale
+        external: the governor's current revision of the case is not the request's expected case revision
+        error: commission.responsibility.ActionRequestStale
+        payload:
+          commission.responsibility.ActionRequestStale:
+            expected_case_revision: input.expected_case_revision
+      - name: not-admitted
+        external: the current frontier refuses the action
+        error: commission.responsibility.ActionNotAdmitted
+        payload:
+          commission.responsibility.ActionNotAdmitted:
+            action: input.action
+      - name: needs-authority
+        external: the current frontier lists the action as ApprovalRequired, naming one capability
+        error: commission.responsibility.ActionNeedsAuthority
+        payload:
+          commission.responsibility.ActionNeedsAuthority:
+            action: input.action
+      - name: admitted
+        accepts: nothing
 
 events:
   - name: commission.responsibility.RunStarted
