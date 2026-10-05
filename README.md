@@ -1,5 +1,9 @@
 # Commission
 
+> **Archived. This code lives in [Loom](https://github.com/beyond10x/loom)** (crates `loom-commission`, `loom-commission-conformance`, `loom-commission-testkit`, `loom-commission-docs`), per
+> Atlas ADR 0090 (2026-10-05): Loom is the one runtime repository. Open issues and changes
+> there. This repository is read-only and kept for its history.
+
 **Build agents you can give responsibility to.**
 
 Commission is the Rust SDK and runtime model for governed autonomous workers. It binds a reusable
